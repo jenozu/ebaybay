@@ -1,10 +1,21 @@
 # eBayBay
 
-Automation project for eBay listing workflows.
+Private eBay AI Listing Assistant for eBay Canada (`EBAY_CA`).
+
+## Source of truth
+
+**Start here:** [`MASTER_LIST.md`](MASTER_LIST.md)
+
+`MASTER_LIST.md` is the authoritative phase-by-phase roadmap. A checkbox is only marked complete after the work is actually implemented and verified.
+
+Supporting documents:
+
+- [`PRD.md`](PRD.md) — product/architecture specification
+- [`setup.md`](setup.md) — repeatable eBay Sandbox OAuth + VPS setup
 
 ## Current status
 
-**eBay Sandbox OAuth is working end-to-end.**
+We intentionally solved the difficult eBay Sandbox/OAuth foundation before building the main listing application.
 
 Verified successfully:
 
@@ -12,11 +23,12 @@ Verified successfully:
 - Sandbox seller created
 - OAuth RuName configured
 - HTTPS callback hosted at `ebaybay.andel-vps.space`
-- OAuth scopes limited to `sell.inventory` and `sell.account`
+- OAuth scopes `sell.inventory` and `sell.account`
 - Authorization Code flow completed
-- Access token received
-- Refresh token received and saved on the VPS
-- Refresh flow tested
+- callback automatically exchanges the code
+- access + refresh tokens received
+- refresh token saved persistently on the VPS
+- refresh-token grant tested
 - Sell Inventory API smoke test passed
 
 Final smoke test:
@@ -27,23 +39,24 @@ HTTP 200
 {"version":"1.0.0"}
 ```
 
+The AI listing application itself is **not built yet**. We now return to Phase 0/1 in `MASTER_LIST.md` and build the product incrementally.
+
 ## Infrastructure
 
 - Host: Hostinger VPS
 - App folder: `/opt/docker/ebaybay`
 - Runtime: Docker + Flask + Gunicorn
-- Reverse proxy / TLS: Hostinger Traefik + Let's Encrypt
-- Public callback host: `https://ebaybay.andel-vps.space`
-- Persistent token path on host: `/opt/docker/ebaybay/data/token.json`
+- Public host: `https://ebaybay.andel-vps.space`
+- Persistent token path: `/opt/docker/ebaybay/data/token.json`
 
 ## Security
 
-Never commit any of the following:
+Never commit or display:
 
 - `.env`
 - Client Secret / Cert ID
-- Access tokens
-- Refresh tokens
+- access tokens
+- refresh tokens
 - `data/token.json`
 
-See [`setup.md`](setup.md) for the complete repeatable setup procedure, including how to repeat the OAuth setup for additional eBay accounts.
+Use `.env.example` for non-secret configuration names/placeholders only.
