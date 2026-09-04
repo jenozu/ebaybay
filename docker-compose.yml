@@ -1,0 +1,12 @@
+services:
+  ebaybay:
+    build: .
+    container_name: ebaybay
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    ports:
+      - "127.0.0.1:8012:8000"
