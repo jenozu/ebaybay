@@ -374,43 +374,52 @@ The app displays selected eBay category, required/recommended item specifics, an
 
 Provide transparent market context and an explainable price recommendation.
 
+**Phase status:** COMPLETE — certified by deterministic Browse mocks, scoring/pricing tests, full regressions, and fresh-database migration reproduction.
+
 ## Comparable search
 
-- [ ] Create `app/services/ebay/browse.py`.
-- [ ] Generate deterministic search terms.
-- [ ] Search exact MPN first.
-- [ ] Search brand + MPN.
-- [ ] Search brand + model.
-- [ ] Fall back to broader product terms.
-- [ ] Retrieve current active/purchasable listings.
-- [ ] Normalize currency.
-- [ ] Capture shipping cost where available.
-- [ ] Store comparable records.
+- [x] Create `app/services/ebay/browse.py`.
+- [x] Generate deterministic search terms.
+- [x] Search exact MPN first.
+- [x] Search brand + MPN.
+- [x] Search brand + model.
+- [x] Fall back to broader product terms.
+- [x] Retrieve current active/purchasable listings.
+- [x] Normalize currency.
+- [x] Capture shipping cost where available.
+- [x] Store comparable records.
 
 ## Similarity scoring
 
-- [ ] Exact MPN weighting.
-- [ ] Brand weighting.
-- [ ] Model weighting.
-- [ ] Condition weighting.
-- [ ] Category weighting.
-- [ ] Title-token overlap.
-- [ ] Remove obvious weak matches.
-- [ ] Keep/display strongest comparables.
-- [ ] Label all results **Active Comparables** (never sold comps).
+- [x] Exact MPN weighting.
+- [x] Brand weighting.
+- [x] Model weighting.
+- [x] Condition weighting.
+- [x] Category weighting.
+- [x] Title-token overlap.
+- [x] Remove obvious weak matches.
+- [x] Keep/display strongest comparables.
+- [x] Label all results **Active Comparables** (never sold comps).
 
 ## Pricing engine
 
-- [ ] Calculate comparable range.
-- [ ] Calculate comparable median.
-- [ ] Calculate quick-sale target.
-- [ ] Calculate recommended target.
-- [ ] Calculate high target.
-- [ ] Calculate pricing confidence.
-- [ ] Explain why confidence is high/medium/low.
-- [ ] Default final price to recommendation only when user has not manually overridden it.
-- [ ] Preserve manual final-price edits.
-- [ ] Add pricing/scoring tests.
+- [x] Calculate comparable range.
+- [x] Calculate comparable median.
+- [x] Calculate quick-sale target.
+- [x] Calculate recommended target.
+- [x] Calculate high target.
+- [x] Calculate pricing confidence.
+- [x] Explain why confidence is high/medium/low.
+- [x] Default final price to recommendation only when user has not manually overridden it.
+- [x] Preserve manual final-price edits.
+- [x] Add pricing/scoring tests.
+
+## Completion evidence
+
+- Full suite: 47 tests passed, including Phase 1–4 and OAuth regression coverage.
+- Fresh-database migration through `0004_phase5_pricing`: PASS.
+- Deterministic Browse mocks cover query priority/fallback, active response normalization, shipping, currency handling, persistence, and provider errors.
+- Deterministic scoring/pricing tests cover weighted relevance, weak-match filtering, strongest-result limits, range/median/targets, confidence explanations, and manual-price preservation.
 
 ## Definition of Done
 

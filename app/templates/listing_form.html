@@ -16,12 +16,14 @@
       <label>{{ form.condition.label }}{{ form.condition(class_="input", placeholder="Optional for now") }}</label>
     </div>
     <label>{{ form.quantity.label }}{{ form.quantity(class_="input") }}</label>
+    {{ form.original_final_price() }}
+    <label>{{ form.final_price.label }}{{ form.final_price(class_="input", placeholder="Leave blank to use the pricing recommendation") }}{% if listing and listing.final_price_manual %}<span class="muted">Manual override active</span>{% endif %}</label>
     <label>{{ form.seller_notes.label }}{{ form.seller_notes(class_="input textarea", rows="5", placeholder="What do you know about the item?") }}</label>
     <label>{{ form.visible_text_text.label }}{{ form.visible_text_text(class_="input textarea", rows="4", placeholder="One observed text item per line") }}</label>
     <label>{{ form.search_terms_text.label }}{{ form.search_terms_text(class_="input textarea", rows="4", placeholder="One search term per line") }}</label>
     <label>{{ form.attributes_text.label }}{{ form.attributes_text(class_="input textarea", rows="5", placeholder="Color: Black\nMaterial: Steel") }}</label>
     <label>{{ form.images.label }}{{ form.images(class_="input", accept="image/jpeg,image/png,image/webp") }}</label>
-    {% for field in [form.title, form.product_name, form.brand, form.model_number, form.mpn, form.gtin, form.condition, form.quantity, form.seller_notes, form.visible_text_text, form.search_terms_text, form.attributes_text, form.images] %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}{% endfor %}
+    {% for field in [form.title, form.product_name, form.brand, form.model_number, form.mpn, form.gtin, form.condition, form.quantity, form.final_price, form.seller_notes, form.visible_text_text, form.search_terms_text, form.attributes_text, form.images] %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}{% endfor %}
     <div class="actions">{{ form.submit(class_="btn btn-cyan") }}<a class="btn btn-white" href="{{ url_for('listings.detail', listing_id=listing.id) if listing else url_for('listings.dashboard') }}">Cancel</a></div>
   </form>
 </section>

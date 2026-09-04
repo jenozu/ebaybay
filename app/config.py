@@ -28,6 +28,7 @@ class Config:
 
     EBAY_ENVIRONMENT = os.getenv("EBAY_ENVIRONMENT", "sandbox")
     EBAY_MARKETPLACE_ID = os.getenv("EBAY_MARKETPLACE_ID", "EBAY_CA")
+    EBAY_CURRENCY = os.getenv("EBAY_CURRENCY", "CAD").upper()
     EBAY_CLIENT_ID = os.getenv("EBAY_CLIENT_ID", "")
     EBAY_CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET", "")
     EBAY_RUNAME = os.getenv("EBAY_RUNAME", "")

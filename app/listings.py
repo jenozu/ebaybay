@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, send_from_directory, url_for
@@ -8,9 +9,11 @@ from .ai.service import AnalysisValidationError, analyze_listing
 from .auth import login_required
 from .extensions import db
 from .forms import ListingForm
-from .models import Listing, ListingImage, ListingStatus
+from .models import ComparableListing, Listing, ListingImage, ListingStatus, utcnow
+from .services.ebay.browse import BrowseClient, BrowseError, search_active_comparables
 from .services.ebay.taxonomy import CategoryCandidate, TaxonomyClient, TaxonomyError, select_category, taxonomy_query
 from .services.ebay.tokens import EbayTokenError, load_access_token
+from .services.pricing import calculate_pricing, strongest_comparables
 from .services.sku import generate_sku
 from .services.uploads import UploadValidationError, save_image
 
@@ -24,6 +27,15 @@ def _taxonomy_client() -> TaxonomyClient:
         marketplace_id=config["EBAY_MARKETPLACE_ID"],
         api_base=config["EBAY_API_BASE"],
         timeout=config["EBAY_HTTP_TIMEOUT_SECONDS"],
+        access_token_provider=lambda: load_access_token(config["EBAY_TOKEN_PATH"]),
+    )
+
+
+def _browse_client() -> BrowseClient:
+    config = current_app.config
+    return BrowseClient(
+        environment=config["EBAY_ENVIRONMENT"], marketplace_id=config["EBAY_MARKETPLACE_ID"],
+        api_base=config["EBAY_API_BASE"], timeout=config["EBAY_HTTP_TIMEOUT_SECONDS"],
         access_token_provider=lambda: load_access_token(config["EBAY_TOKEN_PATH"]),
     )
 
@@ -67,6 +79,14 @@ def _apply_form(listing: Listing, form: ListingForm) -> None:
     listing.gtin = form.gtin.data or None
     listing.condition = form.condition.data or None
     listing.quantity = form.quantity.data
+    original = None
+    try:
+        original = Decimal(form.original_final_price.data) if form.original_final_price.data else None
+    except InvalidOperation:
+        pass
+    if listing.id is None or form.final_price.data != original:
+        listing.final_price_manual = form.final_price.data is not None
+    listing.final_price = form.final_price.data
     listing.seller_notes = form.seller_notes.data or None
     listing.ai_visible_text = _split_lines(form.visible_text_text.data)
     listing.ai_search_terms = _split_lines(form.search_terms_text.data)
@@ -78,6 +98,7 @@ def _prepare_edit_form(form: ListingForm, listing: Listing) -> None:
         form.visible_text_text.data = "\n".join(listing.ai_visible_text or [])
         form.search_terms_text.data = "\n".join(listing.ai_search_terms or [])
         form.attributes_text.data = _format_attributes(listing.ai_detected_attributes)
+        form.original_final_price.data = listing.price_display or ""
 
 
 @bp.get("/dashboard")
@@ -218,6 +239,44 @@ def update_aspects(listing_id):
         aspect.value = (request.form.get(f"aspect_{aspect.id}") or "").strip() or None
     db.session.commit()
     flash("Item specifics saved.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/comparables/refresh")
+@login_required
+def refresh_comparables(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    try:
+        currency = current_app.config["EBAY_CURRENCY"]
+        items = search_active_comparables(listing, _browse_client(), relevance_filter=lambda found: strongest_comparables(listing, found, currency=currency))
+        scored = strongest_comparables(listing, items, currency=currency)
+        listing.comparables = [ComparableListing(
+            ebay_item_id=entry.item.item_id, title=entry.item.title, price=entry.item.price,
+            shipping_cost=entry.item.shipping_cost, total_price=entry.item.total_price,
+            currency=entry.item.currency, url=entry.item.url, condition=entry.item.condition,
+            category_id=entry.item.category_id, search_query=entry.item.search_query,
+            similarity_score=entry.score,
+        ) for entry in scored]
+        summary = calculate_pricing(scored)
+        fields = ("comparable_low", "comparable_high", "comparable_median", "quick_sale_price", "recommended_price", "high_target_price", "pricing_confidence", "pricing_explanation")
+        if summary:
+            values = (summary.low, summary.high, summary.median, summary.quick_sale, summary.recommended, summary.high_target, summary.confidence, summary.explanation)
+            for field, value in zip(fields, values):
+                setattr(listing, field, value)
+            if not listing.final_price_manual:
+                listing.final_price = summary.recommended
+        else:
+            for field in fields:
+                setattr(listing, field, None)
+            if not listing.final_price_manual:
+                listing.final_price = None
+        listing.comparables_last_searched_at = utcnow()
+        db.session.commit()
+    except (EbayTokenError, BrowseError) as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
+    else:
+        flash(f"Active comparables updated: {len(scored)} relevant listings retained.", "success")
     return redirect(url_for("listings.detail", listing_id=listing.id))
 
 
