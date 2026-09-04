@@ -12,6 +12,7 @@ Supporting documents:
 
 - [`PRD.md`](PRD.md) — product/architecture specification
 - [`setup.md`](setup.md) — repeatable eBay Sandbox OAuth + VPS setup
+- [`UI_STYLE_GUIDE.md`](UI_STYLE_GUIDE.md) — approved neo-brutalist pastel visual system and color palette
 
 ## Current status
 
@@ -30,6 +31,7 @@ Verified successfully:
 - refresh token saved persistently on the VPS
 - refresh-token grant tested
 - Sell Inventory API smoke test passed
+- MVP visual theme approved and documented
 
 Final smoke test:
 
