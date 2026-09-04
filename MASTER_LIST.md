@@ -79,17 +79,17 @@ Create an isolated, reproducible project and put the actual source code under Gi
 - [x] Create VPS project directory `/opt/docker/ebaybay`.
 - [x] Establish Python 3.12 + Flask + Gunicorn baseline.
 - [x] Add `.gitignore` protecting secrets/tokens.
-- [ ] Add `.dockerignore` to Git.
-- [ ] Add `.env.example` containing variable names/placeholders only.
+- [x] Add `.dockerignore` to Git.
+- [x] Add `.env.example` containing variable names/placeholders only.
 - [x] Add `README.md`.
 - [x] Add repeatable OAuth `setup.md`.
 - [x] Add `PRD.md` design reference.
 - [x] Add `MASTER_LIST.md` as source-of-truth roadmap.
-- [ ] Add current `app.py` to Git.
-- [ ] Add current `requirements.txt` to Git.
-- [ ] Add current `Dockerfile` to Git.
-- [ ] Add current `docker-compose.yml` to Git with no secrets.
-- [ ] Add persistent `data/.gitkeep` and `uploads/.gitkeep` placeholders.
+- [x] Add application source (`app/` package + `wsgi.py`) to Git.
+- [x] Add current `requirements.txt` to Git.
+- [x] Add current `Dockerfile` to Git.
+- [x] Add current `docker-compose.yml` to Git with no secrets.
+- [x] Add persistent `data/.gitkeep` and `uploads/.gitkeep` placeholders.
 - [ ] Add `/health` route returning `{"status":"ok"}`.
 - [x] Verify Docker container starts successfully on the VPS.
 - [x] Verify Docker restart policy is configured.
@@ -115,60 +115,62 @@ and the VPS application source matches `main` in GitHub with no secrets committe
 
 Build a useful local listing/draft application before adding AI.
 
+**Phase status:** COMPLETE — certified by automated tests, OAuth regression coverage, and migration reproduction.
+
 ## Application foundation
 
-- [ ] Refactor to Flask application factory.
-- [ ] Create `app/` package structure.
-- [ ] Add configuration module.
-- [ ] Configure SQLAlchemy.
-- [ ] Configure Alembic migrations.
-- [ ] Set SQLite database path `/app/data/app.db`.
-- [ ] Ensure DB persists through Docker restarts.
+- [x] Refactor to Flask application factory.
+- [x] Create `app/` package structure.
+- [x] Add configuration module.
+- [x] Configure SQLAlchemy.
+- [x] Configure Alembic migrations.
+- [x] Set SQLite database path `/app/data/app.db`.
+- [x] Ensure DB persists through Docker restarts.
 
 ## Data models
 
-- [ ] Create `Listing` model.
-- [ ] Create `ListingImage` model.
-- [ ] Create `ListingAspect` model.
-- [ ] Create `ComparableListing` model.
-- [ ] Create `eBayConnection` model or equivalent secure connection storage abstraction.
-- [ ] Implement explicit listing state machine.
-- [ ] Add initial migration.
+- [x] Create `Listing` model.
+- [x] Create `ListingImage` model.
+- [x] Create `ListingAspect` model.
+- [x] Create `ComparableListing` model.
+- [x] Create `eBayConnection` model or equivalent secure connection storage abstraction.
+- [x] Implement explicit listing state machine.
+- [x] Add initial migration.
 
 ## Authentication
 
-- [ ] Add private single-user login.
-- [ ] Store password securely as a hash.
-- [ ] Protect listing/settings routes.
-- [ ] Configure secure session cookies.
-- [ ] Add CSRF protection.
-- [ ] No public registration.
+- [x] Add private single-user login.
+- [x] Store password securely as a hash.
+- [x] Protect listing/settings routes.
+- [x] Configure secure session cookies.
+- [x] Add CSRF protection.
+- [x] No public registration.
 
 ## Draft workflow
 
-- [ ] Build dashboard.
-- [ ] Build New Listing page.
-- [ ] Accept multiple image uploads.
-- [ ] Validate MIME type and extension.
-- [ ] Generate safe filenames.
-- [ ] Configure maximum upload size.
-- [ ] Persist uploaded files in `/app/uploads`.
-- [ ] Add optional seller notes.
-- [ ] Generate internal unique SKU.
-- [ ] Save draft.
-- [ ] Reopen draft.
-- [ ] Edit draft.
-- [ ] Archive/delete draft safely.
-- [ ] Build listing detail page.
-- [ ] Display listing status.
+- [x] Build dashboard.
+- [x] Build New Listing page.
+- [x] Accept multiple image uploads.
+- [x] Validate MIME type and extension.
+- [x] Generate safe filenames.
+- [x] Configure maximum upload size.
+- [x] Persist uploaded files in `/app/uploads`.
+- [x] Add optional seller notes.
+- [x] Generate internal unique SKU.
+- [x] Save draft.
+- [x] Reopen draft.
+- [x] Edit draft.
+- [x] Archive/delete draft safely.
+- [x] Build listing detail page.
+- [x] Display listing status.
 
 ## Tests
 
-- [ ] Test login/auth protection.
-- [ ] Test draft creation.
-- [ ] Test image upload validation.
-- [ ] Test draft persistence after restart.
-- [ ] Test edit/reopen flow.
+- [x] Test login/auth protection.
+- [x] Test draft creation.
+- [x] Test image upload validation.
+- [x] Test draft persistence after restart.
+- [x] Test edit/reopen flow.
 
 ## Definition of Done
 
