@@ -194,61 +194,63 @@ works without AI or eBay APIs.
 
 Turn photos + seller notes into structured, editable product information without inventing facts.
 
+**Phase status:** COMPLETE — certified by automated provider/schema/workflow tests and reproducible migrations.
+
 ## Provider architecture
 
-- [ ] Create AI provider interface.
-- [ ] Add provider configuration through `.env`.
-- [ ] Keep vendor-specific code behind provider abstraction.
-- [ ] Add model configuration.
+- [x] Create AI provider interface.
+- [x] Add provider configuration through `.env`.
+- [x] Keep vendor-specific code behind provider abstraction.
+- [x] Add model configuration.
 
 ## Structured analysis
 
-- [ ] Define Pydantic/structured JSON schema.
-- [ ] Include product name.
-- [ ] Include brand.
-- [ ] Include model.
-- [ ] Include MPN.
-- [ ] Include GTIN when genuinely visible/known.
-- [ ] Include condition suggestion.
-- [ ] Include condition confidence.
-- [ ] Include visible observations.
-- [ ] Include visible text.
-- [ ] Include search terms.
-- [ ] Include detected attributes.
-- [ ] Include uncertain fields.
-- [ ] Include overall confidence.
+- [x] Define Pydantic/structured JSON schema.
+- [x] Include product name.
+- [x] Include brand.
+- [x] Include model.
+- [x] Include MPN.
+- [x] Include GTIN when genuinely visible/known.
+- [x] Include condition suggestion.
+- [x] Include condition confidence.
+- [x] Include visible observations.
+- [x] Include visible text.
+- [x] Include search terms.
+- [x] Include detected attributes.
+- [x] Include uncertain fields.
+- [x] Include overall confidence.
 
 ## Prompting rules
 
-- [ ] Do not infer unseen specifications.
-- [ ] Never invent MPNs/model numbers.
-- [ ] Distinguish visible text from inference.
-- [ ] Use `null` for unknown values.
-- [ ] Flag uncertainty.
-- [ ] Describe visible damage.
-- [ ] Never call an item new solely because it looks clean.
-- [ ] Seller notes override visual guesses about known facts.
+- [x] Do not infer unseen specifications.
+- [x] Never invent MPNs/model numbers.
+- [x] Distinguish visible text from inference.
+- [x] Use `null` for unknown values.
+- [x] Flag uncertainty.
+- [x] Describe visible damage.
+- [x] Never call an item new solely because it looks clean.
+- [x] Seller notes override visual guesses about known facts.
 
 ## Workflow
 
-- [ ] Send multiple photos in one analysis.
-- [ ] Include seller notes.
-- [ ] Parse/validate structured response.
-- [ ] Handle malformed AI output.
-- [ ] Save raw AI JSON for debugging/audit.
-- [ ] Populate editable draft fields.
-- [ ] Display confidence.
-- [ ] Display uncertain fields.
-- [ ] Add Regenerate Analysis action.
-- [ ] Preserve user edits when regenerating unless explicitly replaced.
+- [x] Send multiple photos in one analysis.
+- [x] Include seller notes.
+- [x] Parse/validate structured response.
+- [x] Handle malformed AI output.
+- [x] Save raw AI JSON for debugging/audit.
+- [x] Populate editable draft fields.
+- [x] Display confidence.
+- [x] Display uncertain fields.
+- [x] Add Regenerate Analysis action.
+- [x] Preserve user edits when regenerating unless explicitly replaced.
 
 ## Tests
 
-- [ ] Add mock AI fixtures.
-- [ ] Test valid response parsing.
-- [ ] Test invalid JSON handling.
-- [ ] Test null/uncertain fields.
-- [ ] Test seller-note precedence.
+- [x] Add mock AI fixtures.
+- [x] Test valid response parsing.
+- [x] Test invalid JSON handling.
+- [x] Test null/uncertain fields.
+- [x] Test seller-note precedence.
 
 ## Definition of Done
 
