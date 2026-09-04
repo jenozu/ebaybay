@@ -41,7 +41,7 @@ jobs:
           import sqlite3
           conn = sqlite3.connect('/tmp/ebaybay-migration-test.db')
           tables = {r[0] for r in conn.execute("select name from sqlite_master where type='table'")}
-          expected = {'listings','listing_images','listing_aspects','comparable_listings','ebay_connections','alembic_version'}
+          expected = {'listings','listing_images','listing_aspects','comparable_listings','ebay_connections','ai_analyses','alembic_version'}
           missing = expected - tables
           assert not missing, missing
           print('migration tables ok')
@@ -50,15 +50,3 @@ jobs:
         run: |
           git diff --exit-code
           test -z "$(git status --porcelain)"
-      - name: Finalize Phase 1 roadmap
-        if: github.ref == 'refs/heads/main'
-        run: |
-          if [ -f .phase1-finalize ]; then
-            python scripts/finalize_phase1.py
-            rm .phase1-finalize
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add MASTER_LIST.md .phase1-finalize
-            git commit -m "docs: certify Phase 1 complete"
-            git push
-          fi

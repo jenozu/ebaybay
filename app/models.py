@@ -12,14 +12,7 @@ class ListingStatus:
     FAILED = "FAILED"
     ARCHIVED = "ARCHIVED"
     ALL = {DRAFT, READY, STAGED, PUBLISHED, FAILED, ARCHIVED}
-    TRANSITIONS = {
-        DRAFT: {READY, ARCHIVED},
-        READY: {DRAFT, STAGED, ARCHIVED},
-        STAGED: {READY, PUBLISHED, FAILED},
-        FAILED: {DRAFT, READY, ARCHIVED},
-        PUBLISHED: set(),
-        ARCHIVED: {DRAFT},
-    }
+    TRANSITIONS = {DRAFT: {READY, ARCHIVED}, READY: {DRAFT, STAGED, ARCHIVED}, STAGED: {READY, PUBLISHED, FAILED}, FAILED: {DRAFT, READY, ARCHIVED}, PUBLISHED: set(), ARCHIVED: {DRAFT}}
 
 
 def utcnow():
@@ -31,16 +24,31 @@ class Listing(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sku = db.Column(db.String(64), nullable=False, unique=True, index=True)
     title = db.Column(db.String(255), nullable=True)
+    product_name = db.Column(db.String(255), nullable=True)
+    brand = db.Column(db.String(128), nullable=True)
+    model_number = db.Column(db.String(128), nullable=True)
+    mpn = db.Column(db.String(128), nullable=True)
+    gtin = db.Column(db.String(64), nullable=True)
     seller_notes = db.Column(db.Text, nullable=True)
     condition = db.Column(db.String(64), nullable=True)
     quantity = db.Column(db.Integer, nullable=False, default=1)
     final_price = db.Column(db.Numeric(10, 2), nullable=True)
     status = db.Column(db.String(32), nullable=False, default=ListingStatus.DRAFT, index=True)
+    ai_condition_suggestion = db.Column(db.String(64), nullable=True)
+    ai_condition_confidence = db.Column(db.Float, nullable=True)
+    ai_overall_confidence = db.Column(db.Float, nullable=True)
+    ai_visible_observations = db.Column(db.JSON, nullable=False, default=list)
+    ai_visible_text = db.Column(db.JSON, nullable=False, default=list)
+    ai_search_terms = db.Column(db.JSON, nullable=False, default=list)
+    ai_detected_attributes = db.Column(db.JSON, nullable=False, default=dict)
+    ai_uncertain_fields = db.Column(db.JSON, nullable=False, default=list)
+    ai_last_analyzed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
     images = db.relationship("ListingImage", back_populates="listing", cascade="all, delete-orphan", order_by="ListingImage.sort_order")
     aspects = db.relationship("ListingAspect", back_populates="listing", cascade="all, delete-orphan")
     comparables = db.relationship("ComparableListing", back_populates="listing", cascade="all, delete-orphan")
+    ai_analyses = db.relationship("AIAnalysis", back_populates="listing", cascade="all, delete-orphan", order_by="AIAnalysis.created_at")
 
     def can_transition_to(self, new_status: str) -> bool:
         return new_status in ListingStatus.TRANSITIONS.get(self.status, set())
@@ -93,6 +101,19 @@ class ComparableListing(db.Model):
     url = db.Column(db.Text, nullable=True)
     similarity_score = db.Column(db.Float, nullable=True)
     listing = db.relationship("Listing", back_populates="comparables")
+
+
+class AIAnalysis(db.Model):
+    __tablename__ = "ai_analyses"
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = db.Column(db.String(64), nullable=False)
+    model = db.Column(db.String(128), nullable=False)
+    raw_json = db.Column(db.Text, nullable=False)
+    response_json = db.Column(db.JSON, nullable=True)
+    parsed_json = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    listing = db.relationship("Listing", back_populates="ai_analyses")
 
 
 class EbayConnection(db.Model):

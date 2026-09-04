@@ -20,6 +20,12 @@ class Config:
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"
     WTF_CSRF_TIME_LIMIT = None
 
+    AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")
+    AI_API_KEY = os.getenv("AI_API_KEY", "")
+    AI_MODEL = os.getenv("AI_MODEL", "")
+    AI_API_BASE = os.getenv("AI_API_BASE", "https://api.openai.com/v1")
+    AI_TIMEOUT_SECONDS = int(os.getenv("AI_TIMEOUT_SECONDS", "90"))
+
     EBAY_ENVIRONMENT = os.getenv("EBAY_ENVIRONMENT", "sandbox")
     EBAY_MARKETPLACE_ID = os.getenv("EBAY_MARKETPLACE_ID", "EBAY_CA")
     EBAY_CLIENT_ID = os.getenv("EBAY_CLIENT_ID", "")

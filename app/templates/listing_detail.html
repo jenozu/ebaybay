@@ -1,12 +1,25 @@
 {% extends "base.html" %}
-{% block title %}{{ listing.title or listing.sku }} · eBayBay{% endblock %}
+{% block title %}{{ listing.title or listing.product_name or listing.sku }} · eBayBay{% endblock %}
 {% block content %}
-<div class="page-head"><div><span class="eyebrow">{{ listing.status }}</span><h1>{{ listing.title or 'Untitled draft' }}</h1><div class="muted">{{ listing.sku }}</div></div><a class="btn btn-cyan" href="{{ url_for('listings.edit', listing_id=listing.id) }}">Edit Draft</a></div>
+<div class="page-head"><div><span class="eyebrow">{{ listing.status }}</span><h1>{{ listing.title or listing.product_name or 'Untitled draft' }}</h1><div class="muted">{{ listing.sku }}</div></div><a class="btn btn-cyan" href="{{ url_for('listings.edit', listing_id=listing.id) }}">Edit Draft</a></div>
 <section class="card">
-  <div class="detail-grid"><div><strong>Condition</strong><p>{{ listing.condition or '—' }}</p></div><div><strong>Quantity</strong><p>{{ listing.quantity }}</p></div><div><strong>Status</strong><p><span class="badge badge-{{ listing.status|lower }}">{{ listing.status }}</span></p></div></div>
+  <div class="detail-grid"><div><strong>Product</strong><p>{{ listing.product_name or '—' }}</p></div><div><strong>Brand</strong><p>{{ listing.brand or '—' }}</p></div><div><strong>Model</strong><p>{{ listing.model_number or '—' }}</p></div><div><strong>MPN</strong><p>{{ listing.mpn or '—' }}</p></div><div><strong>GTIN</strong><p>{{ listing.gtin or '—' }}</p></div><div><strong>Condition</strong><p>{{ listing.condition or '—' }}</p></div><div><strong>Quantity</strong><p>{{ listing.quantity }}</p></div><div><strong>Status</strong><p><span class="badge badge-{{ listing.status|lower }}">{{ listing.status }}</span></p></div></div>
   <h2>Seller Notes</h2><p class="prewrap">{{ listing.seller_notes or 'No notes yet.' }}</p>
 </section>
 {% if listing.images %}<section><h2>Photos</h2><div class="photo-grid">{% for image in listing.images %}<img src="{{ url_for('listings.uploaded_file', filename=image.filename) }}" alt="{{ image.original_filename }}">{% endfor %}</div></section>{% endif %}
+<section class="card ai-card">
+  <div class="page-head"><div><span class="eyebrow">AI PRODUCT ANALYSIS</span><h2>{{ 'Analysis ready' if listing.ai_analyses else 'Analyze photos + notes' }}</h2></div>
+  {% if listing.images %}<form method="post" action="{{ url_for('listings.analyze', listing_id=listing.id) }}" class="stack compact-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><input type="checkbox" name="replace_existing" value="1"> Replace editable fields with regenerated values</label><button class="btn btn-cyan">{{ 'Regenerate Analysis' if listing.ai_analyses else 'Analyze Product' }}</button></form>{% endif %}</div>
+  {% if listing.ai_analyses %}
+  <div class="detail-grid"><div><strong>Overall confidence</strong><p>{{ '%.0f%%'|format((listing.ai_overall_confidence or 0) * 100) }}</p></div><div><strong>Condition suggestion</strong><p>{{ listing.ai_condition_suggestion or '—' }}{% if listing.ai_condition_confidence is not none %} · {{ '%.0f%%'|format(listing.ai_condition_confidence * 100) }}{% endif %}</p></div></div>
+  <h3>Visible observations</h3><ul>{% for item in listing.ai_visible_observations or [] %}<li>{{ item }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul>
+  <h3>Visible text</h3><ul>{% for item in listing.ai_visible_text or [] %}<li>{{ item }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul>
+  <h3>Detected attributes</h3><div class="detail-grid">{% for key, value in (listing.ai_detected_attributes or {}).items() %}<div><strong>{{ key }}</strong><p>{{ value }}</p></div>{% else %}<p>None recorded.</p>{% endfor %}</div>
+  <h3>Search terms</h3><p>{{ (listing.ai_search_terms or [])|join(' · ') or 'None recorded.' }}</p>
+  <h3>Uncertain fields</h3><p>{{ (listing.ai_uncertain_fields or [])|join(', ') or 'None flagged.' }}</p>
+  <p class="muted">Raw and parsed AI responses are retained locally for debugging/audit.</p>
+  {% else %}<p class="muted">AI analysis never publishes automatically. Review and edit every generated field.</p>{% endif %}
+</section>
 <div class="actions danger-zone">
 {% if listing.status == 'ARCHIVED' %}<form method="post" action="{{ url_for('listings.restore', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Restore Draft</button></form>{% else %}<form method="post" action="{{ url_for('listings.archive', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Archive</button></form>{% endif %}
 <form method="post" action="{{ url_for('listings.delete', listing_id=listing.id) }}" onsubmit="return confirm('Delete this draft permanently?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Delete</button></form>
