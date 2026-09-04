@@ -333,26 +333,34 @@ Prove the app can authenticate safely against eBay Sandbox.
 
 Use official eBay category metadata instead of AI guesses.
 
+**Phase status:** COMPLETE — certified by deterministic Taxonomy mocks, full regression tests, and fresh-database migration reproduction.
+
 ## Tasks
 
-- [ ] Create `app/services/ebay/taxonomy.py`.
-- [ ] Fetch marketplace category-tree ID for `EBAY_CA`.
-- [ ] Cache stable tree metadata where sensible.
-- [ ] Implement category suggestions from product keywords/search terms.
-- [ ] Pass AI-derived search terms.
-- [ ] Display top category candidates.
-- [ ] Select a sensible default candidate.
-- [ ] Allow manual category override.
-- [ ] Store category ID.
-- [ ] Store category name.
-- [ ] Store category path.
-- [ ] Fetch category aspects.
-- [ ] Identify required aspects.
-- [ ] Identify recommended aspects.
-- [ ] Map AI attributes into eBay aspect names.
-- [ ] Flag required missing values prominently.
-- [ ] Persist ListingAspect records.
-- [ ] Add Taxonomy mocks/tests.
+- [x] Create `app/services/ebay/taxonomy.py`.
+- [x] Fetch marketplace category-tree ID for `EBAY_CA`.
+- [x] Cache stable tree metadata where sensible.
+- [x] Implement category suggestions from product keywords/search terms.
+- [x] Pass AI-derived search terms.
+- [x] Display top category candidates.
+- [x] Select a sensible default candidate.
+- [x] Allow manual category override.
+- [x] Store category ID.
+- [x] Store category name.
+- [x] Store category path.
+- [x] Fetch category aspects.
+- [x] Identify required aspects.
+- [x] Identify recommended aspects.
+- [x] Map AI attributes into eBay aspect names.
+- [x] Flag required missing values prominently.
+- [x] Persist ListingAspect records.
+- [x] Add Taxonomy mocks/tests.
+
+## Completion evidence
+
+- Full suite: 33 tests passed, including Phase 1 draft, Phase 2 AI, and OAuth regression coverage.
+- Fresh-database migration through `0003_phase4_taxonomy`: PASS.
+- Taxonomy HTTP behavior is covered with deterministic mocks; no live API or credentials are required by automated tests.
 
 ## Definition of Done
 

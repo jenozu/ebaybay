@@ -43,6 +43,10 @@ class Listing(db.Model):
     ai_detected_attributes = db.Column(db.JSON, nullable=False, default=dict)
     ai_uncertain_fields = db.Column(db.JSON, nullable=False, default=list)
     ai_last_analyzed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    ebay_category_id = db.Column(db.String(64), nullable=True)
+    ebay_category_name = db.Column(db.String(255), nullable=True)
+    ebay_category_path = db.Column(db.Text, nullable=True)
+    ebay_category_candidates = db.Column(db.JSON, nullable=False, default=list)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
     images = db.relationship("ListingImage", back_populates="listing", cascade="all, delete-orphan", order_by="ListingImage.sort_order")
@@ -87,6 +91,7 @@ class ListingAspect(db.Model):
     name = db.Column(db.String(128), nullable=False)
     value = db.Column(db.String(255), nullable=True)
     required = db.Column(db.Boolean, nullable=False, default=False)
+    recommended = db.Column(db.Boolean, nullable=False, default=False)
     listing = db.relationship("Listing", back_populates="aspects")
 
 

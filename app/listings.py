@@ -9,10 +9,23 @@ from .auth import login_required
 from .extensions import db
 from .forms import ListingForm
 from .models import Listing, ListingImage, ListingStatus
+from .services.ebay.taxonomy import CategoryCandidate, TaxonomyClient, TaxonomyError, select_category, taxonomy_query
+from .services.ebay.tokens import EbayTokenError, load_access_token
 from .services.sku import generate_sku
 from .services.uploads import UploadValidationError, save_image
 
 bp = Blueprint("listings", __name__)
+
+
+def _taxonomy_client() -> TaxonomyClient:
+    config = current_app.config
+    return TaxonomyClient(
+        environment=config["EBAY_ENVIRONMENT"],
+        marketplace_id=config["EBAY_MARKETPLACE_ID"],
+        api_base=config["EBAY_API_BASE"],
+        timeout=config["EBAY_HTTP_TIMEOUT_SECONDS"],
+        access_token_provider=lambda: load_access_token(config["EBAY_TOKEN_PATH"]),
+    )
 
 
 def _save_uploaded_images(listing: Listing, files) -> list[Path]:
@@ -150,6 +163,61 @@ def analyze(listing_id):
         flash(str(exc), "error")
     else:
         flash("AI product analysis complete.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/taxonomy/suggest")
+@login_required
+def suggest_taxonomy(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    query = taxonomy_query(listing)
+    if not query:
+        flash("Add a product name, title, or search terms before requesting categories.", "error")
+        return redirect(url_for("listings.detail", listing_id=listing.id))
+    try:
+        client = _taxonomy_client()
+        candidates = client.suggest_categories(query)
+        listing.ebay_category_candidates = [candidate.as_dict() for candidate in candidates]
+        if candidates and not listing.ebay_category_id:
+            select_category(listing, client, candidates[0])
+        db.session.commit()
+    except (EbayTokenError, TaxonomyError) as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
+    else:
+        flash("eBay category suggestions updated." if candidates else "eBay returned no category suggestions.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/taxonomy/category")
+@login_required
+def update_category(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    category_id = (request.form.get("category_id") or "").strip()
+    category_name = (request.form.get("category_name") or "").strip()
+    category_path = (request.form.get("category_path") or "").strip()
+    if not category_id or not category_name:
+        flash("Category ID and category name are required.", "error")
+        return redirect(url_for("listings.detail", listing_id=listing.id))
+    try:
+        select_category(listing, _taxonomy_client(), CategoryCandidate(category_id, category_name, category_path or category_name))
+        db.session.commit()
+    except (EbayTokenError, TaxonomyError) as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
+    else:
+        flash("eBay category and official item specifics updated.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/taxonomy/aspects")
+@login_required
+def update_aspects(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    for aspect in listing.aspects:
+        aspect.value = (request.form.get(f"aspect_{aspect.id}") or "").strip() or None
+    db.session.commit()
+    flash("Item specifics saved.", "success")
     return redirect(url_for("listings.detail", listing_id=listing.id))
 
 

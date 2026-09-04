@@ -20,6 +20,29 @@
   <p class="muted">Raw and parsed AI responses are retained locally for debugging/audit.</p>
   {% else %}<p class="muted">AI analysis never publishes automatically. Review and edit every generated field.</p>{% endif %}
 </section>
+<section class="card taxonomy-card">
+  <div class="page-head"><div><span class="eyebrow">EBAY TAXONOMY · {{ config.EBAY_MARKETPLACE_ID }}</span><h2>Category + item specifics</h2></div>
+  <form method="post" action="{{ url_for('listings.suggest_taxonomy', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-cyan">Get eBay Suggestions</button></form></div>
+  {% if listing.ebay_category_id %}<p><strong>Selected:</strong> {{ listing.ebay_category_path or listing.ebay_category_name }} <span class="muted">({{ listing.ebay_category_id }})</span></p>{% else %}<p class="missing-required">No eBay category selected.</p>{% endif %}
+  {% if listing.ebay_category_candidates %}
+  <h3>Top category candidates</h3>
+  <div class="stack compact-form">{% for candidate in listing.ebay_category_candidates %}
+    <form method="post" action="{{ url_for('listings.update_category', listing_id=listing.id) }}" class="candidate-row">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="category_id" value="{{ candidate.category_id }}"><input type="hidden" name="category_name" value="{{ candidate.name }}"><input type="hidden" name="category_path" value="{{ candidate.path }}">
+      <span>{{ candidate.path }} <span class="muted">({{ candidate.category_id }})</span></span><button class="btn btn-white">{{ 'Selected' if candidate.category_id == listing.ebay_category_id else 'Select' }}</button>
+    </form>{% endfor %}</div>
+  {% endif %}
+  <details><summary>Manual category override</summary><form method="post" action="{{ url_for('listings.update_category', listing_id=listing.id) }}" class="stack compact-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label>Official category ID<input class="input" name="category_id" required value="{{ listing.ebay_category_id or '' }}"></label><label>Category name<input class="input" name="category_name" required value="{{ listing.ebay_category_name or '' }}"></label><label>Category path<input class="input" name="category_path" value="{{ listing.ebay_category_path or '' }}"></label><button class="btn btn-lilac">Apply Override + Refresh Aspects</button>
+  </form></details>
+  {% if listing.aspects %}
+  {% set missing = listing.aspects|selectattr('required')|rejectattr('value')|list %}
+  {% if missing %}<div class="missing-required"><strong>Missing required item specifics:</strong> {{ missing|map(attribute='name')|join(', ') }}</div>{% endif %}
+  <form method="post" action="{{ url_for('listings.update_aspects', listing_id=listing.id) }}" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="detail-grid">{% for aspect in listing.aspects %}<label>{{ aspect.name }} {% if aspect.required %}<strong class="required-mark">Required</strong>{% elif aspect.recommended %}<span class="muted">Recommended</span>{% endif %}<input class="input{% if aspect.required and not aspect.value %} input-missing{% endif %}" name="aspect_{{ aspect.id }}" value="{{ aspect.value or '' }}"></label>{% endfor %}</div>
+    <button class="btn btn-cyan">Save Item Specifics</button></form>
+  {% endif %}
+</section>
 <div class="actions danger-zone">
 {% if listing.status == 'ARCHIVED' %}<form method="post" action="{{ url_for('listings.restore', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Restore Draft</button></form>{% else %}<form method="post" action="{{ url_for('listings.archive', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Archive</button></form>{% endif %}
 <form method="post" action="{{ url_for('listings.delete', listing_id=listing.id) }}" onsubmit="return confirm('Delete this draft permanently?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Delete</button></form>

@@ -1,0 +1,1 @@
+"""eBay API service abstractions."""
