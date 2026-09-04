@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Run tests
+        run: pytest -q
+      - name: Verify migrations from empty database
+        env:
+          DATABASE_URL: sqlite:////tmp/ebaybay-migration-test.db
+          UPLOAD_DIR: /tmp/ebaybay-uploads
+          SECRET_KEY: ci-secret
+          SESSION_COOKIE_SECURE: 'false'
+        run: |
+          rm -f /tmp/ebaybay-migration-test.db
+          flask --app wsgi.py db upgrade
+          python - <<'PY'
+          import sqlite3
+          conn = sqlite3.connect('/tmp/ebaybay-migration-test.db')
+          tables = {r[0] for r in conn.execute("select name from sqlite_master where type='table'")}
+          expected = {'listings','listing_images','listing_aspects','comparable_listings','ebay_connections','alembic_version'}
+          missing = expected - tables
+          assert not missing, missing
+          print('migration tables ok')
+          PY

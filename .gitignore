@@ -1,6 +1,12 @@
 .env
 .env.*
 !.env.example
-data/token.json
+data/*
+!data/.gitkeep
+uploads/*
+!uploads/.gitkeep
 __pycache__/
 *.pyc
+.pytest_cache/
+.coverage
+htmlcov/

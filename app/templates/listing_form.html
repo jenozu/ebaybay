@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Draft' if listing else 'New Listing' }} · eBayBay{% endblock %}
+{% block content %}
+<section class="card form-card">
+  <span class="eyebrow">{{ 'EDIT DRAFT' if listing else 'NEW LISTING' }}</span>
+  <h1>{{ listing.sku if listing else 'Create draft' }}</h1>
+  <form method="post" enctype="multipart/form-data" class="stack">
+    {{ form.hidden_tag() }}
+    <label>{{ form.title.label }}{{ form.title(class_="input", placeholder="Optional working title") }}</label>
+    <label>{{ form.condition.label }}{{ form.condition(class_="input", placeholder="Optional for now") }}</label>
+    <label>{{ form.quantity.label }}{{ form.quantity(class_="input") }}</label>
+    <label>{{ form.seller_notes.label }}{{ form.seller_notes(class_="input textarea", rows="6", placeholder="What do you know about the item?") }}</label>
+    <label>{{ form.images.label }}{{ form.images(class_="input", accept="image/jpeg,image/png,image/webp") }}</label>
+    {% for field in [form.title, form.condition, form.quantity, form.seller_notes, form.images] %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}{% endfor %}
+    <div class="actions">{{ form.submit(class_="btn btn-cyan") }}<a class="btn btn-white" href="{{ url_for('listings.detail', listing_id=listing.id) if listing else url_for('listings.dashboard') }}">Cancel</a></div>
+  </form>
+</section>
+{% endblock %}

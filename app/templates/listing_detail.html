@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ listing.title or listing.sku }} · eBayBay{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">{{ listing.status }}</span><h1>{{ listing.title or 'Untitled draft' }}</h1><div class="muted">{{ listing.sku }}</div></div><a class="btn btn-cyan" href="{{ url_for('listings.edit', listing_id=listing.id) }}">Edit Draft</a></div>
+<section class="card">
+  <div class="detail-grid"><div><strong>Condition</strong><p>{{ listing.condition or '—' }}</p></div><div><strong>Quantity</strong><p>{{ listing.quantity }}</p></div><div><strong>Status</strong><p><span class="badge badge-{{ listing.status|lower }}">{{ listing.status }}</span></p></div></div>
+  <h2>Seller Notes</h2><p class="prewrap">{{ listing.seller_notes or 'No notes yet.' }}</p>
+</section>
+{% if listing.images %}<section><h2>Photos</h2><div class="photo-grid">{% for image in listing.images %}<img src="{{ url_for('listings.uploaded_file', filename=image.filename) }}" alt="{{ image.original_filename }}">{% endfor %}</div></section>{% endif %}
+<div class="actions danger-zone">
+{% if listing.status == 'ARCHIVED' %}<form method="post" action="{{ url_for('listings.restore', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Restore Draft</button></form>{% else %}<form method="post" action="{{ url_for('listings.archive', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Archive</button></form>{% endif %}
+<form method="post" action="{{ url_for('listings.delete', listing_id=listing.id) }}" onsubmit="return confirm('Delete this draft permanently?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Delete</button></form>
+</div>
+{% endblock %}

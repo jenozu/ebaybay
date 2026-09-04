@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Drafts · eBayBay{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><span class="eyebrow">CORE DRAFT APP</span><h1>Listings</h1></div>
+  <a class="btn btn-cyan" href="{{ url_for('listings.new_listing') }}">+ New Listing</a>
+</div>
+{% if listings %}
+<div class="grid">
+{% for listing in listings %}
+  <article class="card listing-card">
+    <div class="card-row"><strong>{{ listing.title or 'Untitled draft' }}</strong><span class="badge badge-{{ listing.status|lower }}">{{ listing.status }}</span></div>
+    <div class="muted">{{ listing.sku }}</div>
+    <p>{{ (listing.seller_notes or 'No seller notes yet.')[:140] }}</p>
+    <a class="btn btn-white" href="{{ url_for('listings.detail', listing_id=listing.id) }}">Open Draft</a>
+  </article>
+{% endfor %}
+</div>
+{% else %}
+<section class="card empty"><h2>No drafts yet</h2><p>Create your first listing draft and add product photos.</p></section>
+{% endif %}
+{% endblock %}

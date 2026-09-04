@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Sign In · eBayBay{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <span class="eyebrow">PRIVATE TOOL</span>
+  <h1>Sign in</h1>
+  <form method="post" class="stack">
+    {{ form.hidden_tag() }}
+    <label>{{ form.username.label }}{{ form.username(class_="input") }}</label>
+    <label>{{ form.password.label }}{{ form.password(class_="input") }}</label>
+    {% for field in [form.username, form.password] %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}{% endfor %}
+    {{ form.submit(class_="btn btn-cyan") }}
+  </form>
+</section>
+{% endblock %}
