@@ -18,11 +18,11 @@ def test_create_draft_with_image(client, login, app):
         assert (app.config["UPLOAD_DIR"] / listing.images[0].filename).exists()
 
 
-def test_rejects_invalid_image_mime(client, login, app):
+def test_rejects_spoofed_image_content(client, login, app):
     login()
     response = client.post("/listings/new", data={"quantity": "1", "images": (io.BytesIO(b"not-an-image"), "fake.jpg")}, content_type="multipart/form-data", follow_redirects=True)
     assert response.status_code == 200
-    assert b"Unsupported image MIME type" in response.data
+    assert b"File contents do not match" in response.data
     with app.app_context():
         assert db.session.query(Listing).count() == 0
 

@@ -9,15 +9,32 @@ class UploadValidationError(ValueError):
     pass
 
 
+def _detected_mime(file: FileStorage) -> str | None:
+    position = file.stream.tell()
+    header = file.stream.read(16)
+    file.stream.seek(position)
+    if header.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
 def validate_image(file: FileStorage, allowed_extensions: set[str], allowed_mime_types: set[str]) -> str:
     original = secure_filename(file.filename or "")
     if not original or "." not in original:
         raise UploadValidationError("Image filename is missing or invalid.")
+
     ext = original.rsplit(".", 1)[1].lower()
     if ext not in allowed_extensions:
         raise UploadValidationError(f"Unsupported image extension: .{ext}")
-    if file.mimetype not in allowed_mime_types:
-        raise UploadValidationError(f"Unsupported image MIME type: {file.mimetype or 'unknown'}")
+
+    detected = _detected_mime(file)
+    expected_for_ext = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(ext)
+    if file.mimetype not in allowed_mime_types or detected not in allowed_mime_types or detected != expected_for_ext:
+        raise UploadValidationError("File contents do not match a supported JPG, PNG, or WebP image.")
     return original
 
 
