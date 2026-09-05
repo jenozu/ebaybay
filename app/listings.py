@@ -15,6 +15,7 @@ from .services.ebay.taxonomy import CategoryCandidate, TaxonomyClient, TaxonomyE
 from .services.ebay.tokens import EbayTokenError
 from .services.ebay.oauth import get_oauth_service
 from .services.ebay.media import MediaServiceError, get_media_service
+from .services.ebay.inventory import InventoryServiceError, get_inventory_service
 from .services.pricing import calculate_pricing, strongest_comparables
 from .services.writer import generate_condition_description, generate_description, generate_title
 from .services.validation import validate_listing
@@ -319,6 +320,19 @@ def upload_images_to_ebay(listing_id):
         flash(str(exc), "error")
     else:
         flash(f"eBay image upload complete: {uploaded} uploaded, {skipped} already current.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/inventory/stage")
+@login_required
+def stage_inventory_item(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    try:
+        changed = get_inventory_service().stage(listing)
+    except (EbayTokenError, InventoryServiceError) as exc:
+        flash(str(exc), "error")
+    else:
+        flash("eBay Inventory Item staged (not live)." if changed else "eBay Inventory Item is already current (not live).", "success")
     return redirect(url_for("listings.detail", listing_id=listing.id))
 
 

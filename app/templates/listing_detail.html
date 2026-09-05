@@ -28,6 +28,10 @@
   {% elif listing.status == 'READY' %}<form method="post" action="{{ url_for('listings.return_to_draft', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Return to Draft</button></form>
   {% else %}<form method="post" action="{{ url_for('listings.approve_listing', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-cyan">Approve Listing · Mark READY</button></form>{% endif %}
 </section>
+<section class="card">
+  <div class="page-head"><div><span class="eyebrow">EBAY INVENTORY</span><h2>Inventory Item staging</h2><p class="muted">Creates or updates an unpublished Inventory Item only. It does not create an offer or make this item live.</p></div>{% if listing.status == 'READY' %}<form method="post" action="{{ url_for('listings.stage_inventory_item', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-cyan">Stage eBay Inventory Item</button></form>{% endif %}</div>
+  <p><strong>Status:</strong> <span class="badge">{{ listing.ebay_inventory_status }}</span>{% if listing.ebay_inventory_staged_at %} <span class="muted">· {{ listing.ebay_inventory_staged_at }}</span>{% endif %}</p>{% if listing.ebay_inventory_error %}<p class="missing-required">{{ listing.ebay_inventory_error }}</p>{% endif %}
+</section>
 <section class="card copy-card">
   <div class="page-head"><div><span class="eyebrow">LISTING COPY</span><h2>Generated copy</h2><p class="muted">Generated from saved listing details, taxonomy specifics, notes, and visible observations. Review and edit before use.</p></div></div>
   <form method="post" action="{{ url_for('listings.save_copy', listing_id=listing.id) }}" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

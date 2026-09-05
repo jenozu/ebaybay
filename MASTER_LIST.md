@@ -664,24 +664,30 @@ Create/update the eBay Inventory Item without publishing it.
 
 ## Tasks
 
-- [ ] Create `app/services/ebay/inventory.py`.
-- [ ] Map Listing → Inventory Item payload.
-- [ ] Send SKU.
-- [ ] Send condition.
-- [ ] Send aspects.
-- [ ] Send product data.
-- [ ] Send eBay image URLs.
-- [ ] Send quantity where appropriate.
-- [ ] Call `createOrReplaceInventoryItem`.
-- [ ] Store sync result/status.
-- [ ] Handle eBay validation errors cleanly.
-- [ ] Make repeated staging idempotent.
-- [ ] Add mocked tests.
-- [ ] Add Sandbox integration test.
+- [x] Create `app/services/ebay/inventory.py`.
+- [x] Map Listing → Inventory Item payload.
+- [x] Send SKU.
+- [x] Send condition.
+- [x] Send aspects.
+- [x] Send product data.
+- [x] Send eBay image URLs.
+- [x] Send quantity where appropriate.
+- [x] Call `createOrReplaceInventoryItem`.
+- [x] Store sync result/status.
+- [x] Handle eBay validation errors cleanly.
+- [x] Make repeated staging idempotent.
+- [x] Add mocked tests.
+- [x] Add Sandbox integration test.
 
 ## Definition of Done
 
 A `READY` local draft can be staged as an eBay Inventory Item without becoming live.
+
+### Completion evidence
+
+- Phase 11 certified locally with 87 passed and 4 opt-in Sandbox integration tests skipped. Deterministic coverage verifies factual payload mapping, shared OAuth token use, Sandbox endpoint selection, image order, safe API failures, idempotent repeat staging, protected UI flow, and retained `READY` status.
+- Migration `0009_phase11_inventory_staging` adds durable local Inventory Item staging status and payload fingerprint state.
+- The opt-in Sandbox check uses the main application OAuth and Inventory services when `RUN_EBAY_SANDBOX_INTEGRATION=1` and a disposable `EBAY_SANDBOX_MEDIA_URL` are supplied.
 
 ---
 
