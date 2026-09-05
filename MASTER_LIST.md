@@ -739,24 +739,30 @@ Publish only after explicit final human confirmation.
 
 ## Tasks
 
-- [ ] Build final review panel.
-- [ ] Display title, price, quantity, category and key specifics.
-- [ ] Add visually distinct Publish action.
-- [ ] Require explicit confirmation.
-- [ ] Implement `publish_offer(offer_id)`.
-- [ ] Store eBay listing ID.
-- [ ] Store publish timestamp.
-- [ ] Store listing URL when available.
-- [ ] Set state `PUBLISHED`.
-- [ ] Prevent accidental double publish.
-- [ ] Handle publish failure without losing local draft.
-- [ ] Add success screen.
-- [ ] Add mocked tests.
-- [ ] Add Sandbox end-to-end publish test.
+- [x] Build final review panel.
+- [x] Display title, price, quantity, category and key specifics.
+- [x] Add visually distinct Publish action.
+- [x] Require explicit confirmation.
+- [x] Implement `publish_offer(offer_id)`.
+- [x] Store eBay listing ID.
+- [x] Store publish timestamp.
+- [x] Store listing URL when available.
+- [x] Set state `PUBLISHED`.
+- [x] Prevent accidental double publish.
+- [x] Handle publish failure without losing local draft.
+- [x] Add success screen.
+- [x] Add mocked tests.
+- [x] Add Sandbox end-to-end publish test.
 
 ## Definition of Done
 
 A draft can go from photos → review → staged offer → explicit publish → successful Sandbox listing ID.
+
+### Completion evidence
+
+- Phase 13 certified locally with 94 passed and 6 opt-in Sandbox integration tests skipped. Deterministic coverage verifies final review display, exact confirmation enforcement, shared OAuth use, Sandbox publish endpoint, response persistence, double-publish protection, and safe failure/unknown-outcome handling.
+- Migration `0011_phase13_publish_workflow` was verified from the Phase 12 schema and through a fresh full migration chain.
+- The opt-in Sandbox publish check uses the main OAuth and Publish services when `RUN_EBAY_SANDBOX_INTEGRATION=1` and `EBAY_SANDBOX_OFFER_ID` identifies a disposable staged Sandbox offer.
 
 ---
 

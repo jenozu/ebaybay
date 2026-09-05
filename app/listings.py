@@ -17,6 +17,7 @@ from .services.ebay.oauth import get_oauth_service
 from .services.ebay.media import MediaServiceError, get_media_service
 from .services.ebay.inventory import InventoryServiceError, get_inventory_service
 from .services.ebay.offers import OfferServiceError, get_offer_service
+from .services.ebay.publish import PublishServiceError, get_publish_service
 from .services.pricing import calculate_pricing, strongest_comparables
 from .services.writer import generate_condition_description, generate_description, generate_title
 from .services.validation import validate_listing
@@ -347,6 +348,22 @@ def stage_offer(listing_id):
         flash(str(exc), "error")
     else:
         flash("Unpublished eBay offer staged. It is not live." if changed else "Unpublished eBay offer is already current. It is not live.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/publish")
+@login_required
+def publish_listing(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    if request.form.get("publish_confirmation") != "PUBLISH":
+        flash("Type PUBLISH to explicitly confirm this eBay publish action.", "error")
+        return redirect(url_for("listings.detail", listing_id=listing.id))
+    try:
+        changed = get_publish_service().publish_offer(listing)
+    except (EbayTokenError, PublishServiceError) as exc:
+        flash(str(exc), "error")
+    else:
+        flash("Listing published successfully." if changed else "This listing was already published.", "success")
     return redirect(url_for("listings.detail", listing_id=listing.id))
 
 
