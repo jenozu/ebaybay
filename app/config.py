@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 
 
@@ -45,3 +46,47 @@ class Config:
     EBAY_FULFILLMENT_POLICY_ID = os.getenv("EBAY_FULFILLMENT_POLICY_ID", "")
     EBAY_RETURN_POLICY_ID = os.getenv("EBAY_RETURN_POLICY_ID", "")
     EBAY_MERCHANT_LOCATION_KEY = os.getenv("EBAY_MERCHANT_LOCATION_KEY", "")
+    APP_LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
+    BACKUP_DIR = Path(os.getenv("BACKUP_DIR", "/app/data/backups"))
+    BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", "14"))
+    UPLOAD_RETENTION_DAYS = int(os.getenv("UPLOAD_RETENTION_DAYS", "30"))
+
+
+def validate_production_config(config: dict) -> None:
+    """Fail closed on unsafe Production startup; Sandbox remains convenient locally."""
+    environment = str(config.get("EBAY_ENVIRONMENT", "")).lower()
+    if environment not in {"sandbox", "production"}:
+        raise RuntimeError("EBAY_ENVIRONMENT must be sandbox or production.")
+    if environment != "production":
+        return
+    missing = []
+    if not config.get("SECRET_KEY") or config.get("SECRET_KEY") == "change-me-before-production": missing.append("SECRET_KEY")
+    if not config.get("APP_PASSWORD_HASH"): missing.append("APP_PASSWORD_HASH")
+    if not config.get("SESSION_COOKIE_SECURE"): missing.append("SESSION_COOKIE_SECURE=true")
+    if config.get("DEBUG"): missing.append("DEBUG=false")
+    for name in ("EBAY_CLIENT_ID", "EBAY_CLIENT_SECRET", "EBAY_RUNAME", "EBAY_TOKEN_ENCRYPTION_KEY"):
+        if not config.get(name): missing.append(name)
+    if config.get("EBAY_MARKETPLACE_ID") != "EBAY_CA": missing.append("EBAY_MARKETPLACE_ID=EBAY_CA")
+    if missing:
+        raise RuntimeError("Unsafe Production configuration: " + ", ".join(missing))
+
+
+class SecretRedactingFilter(logging.Filter):
+    _markers = ("access_token", "refresh_token", "client_secret", "authorization", "bearer ")
+
+    def filter(self, record) -> bool:
+        message = record.getMessage()
+        if any(marker in message.lower() for marker in self._markers):
+            record.msg, record.args = "Sensitive eBay credential data redacted.", ()
+        return True
+
+
+def configure_logging(config: dict) -> None:
+    handler = logging.StreamHandler()
+    handler.addFilter(SecretRedactingFilter())
+    handler.setFormatter(logging.Formatter('{"time":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","message":"%(message)s"}'))
+    root = logging.getLogger()
+    if not any(getattr(existing, "_ebaybay", False) for existing in root.handlers):
+        handler._ebaybay = True
+        root.addHandler(handler)
+    root.setLevel(getattr(logging, config.get("APP_LOG_LEVEL", "INFO"), logging.INFO))

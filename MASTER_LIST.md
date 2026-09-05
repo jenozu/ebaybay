@@ -777,7 +777,7 @@ Safely connect a real seller account and intentionally publish one low-risk real
 - [ ] Obtain Production eBay keyset.
 - [ ] Configure Production RuName.
 - [ ] Configure Production callback/privacy/declined URLs.
-- [ ] Set environment switching cleanly (`sandbox` vs `production`).
+- [x] Set environment switching cleanly (`sandbox` vs `production`).
 - [ ] Connect real seller account.
 - [ ] Retrieve real policies.
 - [ ] Verify real inventory location.
@@ -785,17 +785,17 @@ Safely connect a real seller account and intentionally publish one low-risk real
 
 ## App hardening
 
-- [ ] Production login enabled.
+- [x] Production login enabled.
 - [ ] HTTPS verified.
-- [ ] Production debug disabled.
-- [ ] Gunicorn configured.
-- [ ] Structured logging verified.
-- [ ] Secrets absent from logs.
-- [ ] CSRF/session security verified.
-- [ ] Database backup script.
-- [ ] Upload cleanup policy.
+- [x] Production debug disabled.
+- [x] Gunicorn configured.
+- [x] Structured logging verified.
+- [x] Secrets absent from logs.
+- [x] CSRF/session security verified.
+- [x] Database backup script.
+- [x] Upload cleanup policy.
 - [ ] Docker restart after VPS reboot verified.
-- [ ] Restore-from-backup procedure documented/tested.
+- [x] Restore-from-backup procedure documented/tested.
 
 ## Real smoke test
 
@@ -812,6 +812,12 @@ Safely connect a real seller account and intentionally publish one low-risk real
 ## Definition of Done
 
 One real listing is generated, reviewed, intentionally published, and recorded successfully with production safeguards active.
+
+### Local readiness evidence (not Phase 14 completion)
+
+- Local production guardrail coverage passes with 99 tests and 6 opt-in Sandbox integration tests skipped. Production startup fails closed without required credentials, encryption, secure sessions, `EBAY_CA`, and a non-default secret.
+- Structured credential-redacting logs, Gunicorn stream logging, SQLite backup/restore tooling, and dry-run-first orphan-upload cleanup are implemented and tested. No schema migration was required.
+- Remaining unchecked Phase 14 items require an actual Production eBay keyset/RuName, HTTPS-enabled VPS deployment, real seller authorization/policies/location, Docker restart verification, and an intentional low-risk real listing. They have not been claimed as complete.
 
 ---
 
