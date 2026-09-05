@@ -5,3 +5,4 @@
 .input-missing{border-color:#dc3545!important;background:#fff8f8}
 details{margin-top:1rem} summary{cursor:pointer;font-weight:700}
 .comparables-card,.taxonomy-card,.ai-card{margin-top:24px}.comparable-row{display:flex;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:2px solid #eee}.comparable-row>div:last-child{text-align:right}.comparable-row a{color:inherit}
+.copy-card{margin-top:24px}.copy-actions{justify-content:flex-start;align-items:end}.copy-actions form{display:grid;gap:.5rem}

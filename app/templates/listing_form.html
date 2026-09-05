@@ -17,6 +17,7 @@
     </div>
     <label>{{ form.quantity.label }}{{ form.quantity(class_="input") }}</label>
     {{ form.original_final_price() }}
+    {{ form.original_title() }}
     <label>{{ form.final_price.label }}{{ form.final_price(class_="input", placeholder="Leave blank to use the pricing recommendation") }}{% if listing and listing.final_price_manual %}<span class="muted">Manual override active</span>{% endif %}</label>
     <label>{{ form.seller_notes.label }}{{ form.seller_notes(class_="input textarea", rows="5", placeholder="What do you know about the item?") }}</label>
     <label>{{ form.visible_text_text.label }}{{ form.visible_text_text(class_="input textarea", rows="4", placeholder="One observed text item per line") }}</label>

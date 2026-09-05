@@ -20,6 +20,19 @@
   <p class="muted">Raw and parsed AI responses are retained locally for debugging/audit.</p>
   {% else %}<p class="muted">AI analysis never publishes automatically. Review and edit every generated field.</p>{% endif %}
 </section>
+<section class="card copy-card">
+  <div class="page-head"><div><span class="eyebrow">LISTING COPY</span><h2>Generated copy</h2><p class="muted">Generated from saved listing details, taxonomy specifics, notes, and visible observations. Review and edit before use.</p></div></div>
+  <form method="post" action="{{ url_for('listings.save_copy', listing_id=listing.id) }}" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="original_title" value="{{ listing.title or '' }}"><input type="hidden" name="original_description" value="{{ listing.description or '' }}"><input type="hidden" name="original_condition_description" value="{{ listing.condition_description or '' }}">
+    <label>Title <span class="muted">(max {{ config.EBAY_TITLE_MAX_LENGTH }} characters)</span><input class="input" name="title" maxlength="{{ config.EBAY_TITLE_MAX_LENGTH }}" value="{{ listing.title or '' }}"></label>
+    <label>Description<textarea class="input textarea" name="description" rows="12">{{ listing.description or '' }}</textarea></label>
+    <label>Condition description<textarea class="input textarea" name="condition_description" rows="4">{{ listing.condition_description or '' }}</textarea></label>
+    <button class="btn btn-cyan">Save Copy Edits</button>
+  </form>
+  <div class="actions copy-actions">
+    {% for field, label in [('title', 'Regenerate Title'), ('description', 'Regenerate Description'), ('condition_description', 'Regenerate Condition')] %}<form method="post" action="{{ url_for('listings.regenerate_copy', listing_id=listing.id, field=field) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="muted"><input type="checkbox" name="replace_manual" value="1"> Replace manual edit</label><button class="btn btn-lilac">{{ label }}</button></form>{% endfor %}
+  </div>
+</section>
 <section class="card taxonomy-card">
   <div class="page-head"><div><span class="eyebrow">EBAY TAXONOMY · {{ config.EBAY_MARKETPLACE_ID }}</span><h2>Category + item specifics</h2></div>
   <form method="post" action="{{ url_for('listings.suggest_taxonomy', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-cyan">Get eBay Suggestions</button></form></div>

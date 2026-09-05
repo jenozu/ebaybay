@@ -11,7 +11,8 @@ class LoginForm(FlaskForm):
 
 
 class ListingForm(FlaskForm):
-    title = StringField("Working Title", validators=[Optional(), Length(max=255)])
+    title = StringField("Working Title", validators=[Optional(), Length(max=80)])
+    original_title = HiddenField()
     product_name = StringField("Product Name", validators=[Optional(), Length(max=255)])
     brand = StringField("Brand", validators=[Optional(), Length(max=128)])
     model_number = StringField("Model", validators=[Optional(), Length(max=128)])

@@ -14,6 +14,7 @@ from .services.ebay.browse import BrowseClient, BrowseError, search_active_compa
 from .services.ebay.taxonomy import CategoryCandidate, TaxonomyClient, TaxonomyError, select_category, taxonomy_query
 from .services.ebay.tokens import EbayTokenError, load_access_token
 from .services.pricing import calculate_pricing, strongest_comparables
+from .services.writer import generate_condition_description, generate_description, generate_title
 from .services.sku import generate_sku
 from .services.uploads import UploadValidationError, save_image
 
@@ -71,6 +72,9 @@ def _format_attributes(attributes: dict | None) -> str:
 
 
 def _apply_form(listing: Listing, form: ListingForm) -> None:
+    original_title = form.original_title.data or None
+    if listing.id is None or (form.title.data or None) != original_title:
+        listing.title_manual = bool(form.title.data)
     listing.title = form.title.data or None
     listing.product_name = form.product_name.data or None
     listing.brand = form.brand.data or None
@@ -99,6 +103,7 @@ def _prepare_edit_form(form: ListingForm, listing: Listing) -> None:
         form.search_terms_text.data = "\n".join(listing.ai_search_terms or [])
         form.attributes_text.data = _format_attributes(listing.ai_detected_attributes)
         form.original_final_price.data = listing.price_display or ""
+        form.original_title.data = listing.title or ""
 
 
 @bp.get("/dashboard")
@@ -277,6 +282,54 @@ def refresh_comparables(listing_id):
         flash(str(exc), "error")
     else:
         flash(f"Active comparables updated: {len(scored)} relevant listings retained.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+def _regenerate_field(listing: Listing, field: str, replace_manual: bool) -> bool:
+    manual_field = f"{field}_manual"
+    if getattr(listing, field) and getattr(listing, manual_field) and not replace_manual:
+        return False
+    writers = {
+        "title": lambda: generate_title(listing, current_app.config["EBAY_TITLE_MAX_LENGTH"]),
+        "description": lambda: generate_description(listing),
+        "condition_description": lambda: generate_condition_description(listing),
+    }
+    setattr(listing, field, writers[field]())
+    setattr(listing, manual_field, False)
+    listing.copy_generated_at = utcnow()
+    return True
+
+
+@bp.post("/listings/<int:listing_id>/copy/regenerate/<field>")
+@login_required
+def regenerate_copy(listing_id, field):
+    if field not in {"title", "description", "condition_description"}:
+        return "Unknown copy field", 404
+    listing = db.get_or_404(Listing, listing_id)
+    changed = _regenerate_field(listing, field, request.form.get("replace_manual") == "1")
+    if changed:
+        db.session.commit()
+        flash(f"Generated {field.replace('_', ' ')} saved. It remains editable.", "success")
+    else:
+        flash(f"Manual {field.replace('_', ' ')} was preserved. Select replace to overwrite it.", "error")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/copy/save")
+@login_required
+def save_copy(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    for field in ("title", "description", "condition_description"):
+        value = (request.form.get(field) or "").strip() or None
+        if field == "title" and value and len(value) > current_app.config["EBAY_TITLE_MAX_LENGTH"]:
+            flash(f"Title must be {current_app.config['EBAY_TITLE_MAX_LENGTH']} characters or fewer.", "error")
+            return redirect(url_for("listings.detail", listing_id=listing.id))
+        original = (request.form.get(f"original_{field}") or "").strip() or None
+        if value != original:
+            setattr(listing, field, value)
+            setattr(listing, f"{field}_manual", value is not None)
+    db.session.commit()
+    flash("Listing copy saved.", "success")
     return redirect(url_for("listings.detail", listing_id=listing.id))
 
 

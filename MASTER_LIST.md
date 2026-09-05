@@ -433,23 +433,32 @@ Review UI displays active comps, range, median, recommended price, alternative t
 
 Generate factual, eBay-ready copy from validated product/category information.
 
+**Phase status:** COMPLETE — certified by deterministic evidence-grounded writer tests, full regressions, and fresh-database migration reproduction.
+
 ## Tasks
 
-- [ ] Add title generator.
-- [ ] Enforce current eBay title-length limit.
-- [ ] Prefer brand + MPN/model + product noun when supported.
-- [ ] Avoid keyword stuffing.
-- [ ] Add description generator.
-- [ ] Use consistent description template.
-- [ ] Add condition-description generator.
-- [ ] Use seller notes as factual context.
-- [ ] Use Taxonomy aspects as factual context.
-- [ ] Never invent compatibility/specs.
-- [ ] Save generated copy.
-- [ ] Add Regenerate Title.
-- [ ] Add Regenerate Description.
-- [ ] Preserve manual edits.
-- [ ] Add tests for factual/length constraints.
+- [x] Add title generator.
+- [x] Enforce current eBay title-length limit.
+- [x] Prefer brand + MPN/model + product noun when supported.
+- [x] Avoid keyword stuffing.
+- [x] Add description generator.
+- [x] Use consistent description template.
+- [x] Add condition-description generator.
+- [x] Use seller notes as factual context.
+- [x] Use Taxonomy aspects as factual context.
+- [x] Never invent compatibility/specs.
+- [x] Save generated copy.
+- [x] Add Regenerate Title.
+- [x] Add Regenerate Description.
+- [x] Preserve manual edits.
+- [x] Add tests for factual/length constraints.
+
+## Completion evidence
+
+- Full suite: 59 tests passed, including Phase 1–5 and OAuth regression coverage.
+- Fresh-database migration through `0005_phase6_writer`: PASS.
+- Deterministic writer tests cover identifiers, title limit/truncation, Unicode, missing fields, duplicate-token prevention, escaped HTML, taxonomy aspects, seller notes, condition copy, and comparable-text exclusion.
+- Route tests cover generated-copy persistence, editing, protected endpoints, manual-copy preservation, explicit replacement, and title-length enforcement.
 
 ## Definition of Done
 
