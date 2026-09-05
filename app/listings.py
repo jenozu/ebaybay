@@ -15,10 +15,23 @@ from .services.ebay.taxonomy import CategoryCandidate, TaxonomyClient, TaxonomyE
 from .services.ebay.tokens import EbayTokenError, load_access_token
 from .services.pricing import calculate_pricing, strongest_comparables
 from .services.writer import generate_condition_description, generate_description, generate_title
+from .services.validation import validate_listing
 from .services.sku import generate_sku
 from .services.uploads import UploadValidationError, save_image
 
 bp = Blueprint("listings", __name__)
+
+
+def _validation_issues(listing: Listing):
+    return validate_listing(
+        listing, config=current_app.config, upload_dir=Path(current_app.config["UPLOAD_DIR"]),
+        sku_exists=lambda sku, listing_id: db.session.scalar(select(Listing.id).where(Listing.sku == sku, Listing.id != listing_id)) is not None,
+    )
+
+
+def _invalidate_approval(listing: Listing) -> None:
+    if listing.invalidate_approval():
+        flash("Approval was cleared because this listing was changed. Review and approve it again.", "error")
 
 
 def _taxonomy_client() -> TaxonomyClient:
@@ -145,7 +158,7 @@ def new_listing():
 @login_required
 def detail(listing_id):
     listing = db.get_or_404(Listing, listing_id)
-    return render_template("listing_detail.html", listing=listing)
+    return render_template("listing_detail.html", listing=listing, validation_issues=_validation_issues(listing))
 
 
 @bp.route("/listings/<int:listing_id>/edit", methods=["GET", "POST"])
@@ -157,6 +170,7 @@ def edit(listing_id):
     if form.validate_on_submit():
         created_paths: list[Path] = []
         try:
+            _invalidate_approval(listing)
             _apply_form(listing, form)
             created_paths = _save_uploaded_images(listing, form.images.data or [])
             db.session.commit()
@@ -180,8 +194,12 @@ def edit(listing_id):
 @login_required
 def analyze(listing_id):
     listing = db.get_or_404(Listing, listing_id)
+    if listing.status == ListingStatus.READY:
+        flash("Return an approved listing to DRAFT before running AI analysis.", "error")
+        return redirect(url_for("listings.detail", listing_id=listing.id))
     replace_existing = request.form.get("replace_existing") == "1"
     try:
+        _invalidate_approval(listing)
         analyze_listing(listing, replace_existing=replace_existing)
         db.session.commit()
     except (AIConfigurationError, AIProviderError, AnalysisValidationError) as exc:
@@ -201,6 +219,7 @@ def suggest_taxonomy(listing_id):
         flash("Add a product name, title, or search terms before requesting categories.", "error")
         return redirect(url_for("listings.detail", listing_id=listing.id))
     try:
+        _invalidate_approval(listing)
         client = _taxonomy_client()
         candidates = client.suggest_categories(query)
         listing.ebay_category_candidates = [candidate.as_dict() for candidate in candidates]
@@ -226,6 +245,7 @@ def update_category(listing_id):
         flash("Category ID and category name are required.", "error")
         return redirect(url_for("listings.detail", listing_id=listing.id))
     try:
+        _invalidate_approval(listing)
         select_category(listing, _taxonomy_client(), CategoryCandidate(category_id, category_name, category_path or category_name))
         db.session.commit()
     except (EbayTokenError, TaxonomyError) as exc:
@@ -240,6 +260,7 @@ def update_category(listing_id):
 @login_required
 def update_aspects(listing_id):
     listing = db.get_or_404(Listing, listing_id)
+    _invalidate_approval(listing)
     for aspect in listing.aspects:
         aspect.value = (request.form.get(f"aspect_{aspect.id}") or "").strip() or None
     db.session.commit()
@@ -252,6 +273,7 @@ def update_aspects(listing_id):
 def refresh_comparables(listing_id):
     listing = db.get_or_404(Listing, listing_id)
     try:
+        _invalidate_approval(listing)
         currency = current_app.config["EBAY_CURRENCY"]
         items = search_active_comparables(listing, _browse_client(), relevance_filter=lambda found: strongest_comparables(listing, found, currency=currency))
         scored = strongest_comparables(listing, items, currency=currency)
@@ -306,6 +328,7 @@ def regenerate_copy(listing_id, field):
     if field not in {"title", "description", "condition_description"}:
         return "Unknown copy field", 404
     listing = db.get_or_404(Listing, listing_id)
+    _invalidate_approval(listing)
     changed = _regenerate_field(listing, field, request.form.get("replace_manual") == "1")
     if changed:
         db.session.commit()
@@ -319,6 +342,7 @@ def regenerate_copy(listing_id, field):
 @login_required
 def save_copy(listing_id):
     listing = db.get_or_404(Listing, listing_id)
+    _invalidate_approval(listing)
     for field in ("title", "description", "condition_description"):
         value = (request.form.get(field) or "").strip() or None
         if field == "title" and value and len(value) > current_app.config["EBAY_TITLE_MAX_LENGTH"]:
@@ -330,6 +354,46 @@ def save_copy(listing_id):
             setattr(listing, f"{field}_manual", value is not None)
     db.session.commit()
     flash("Listing copy saved.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/validate")
+@login_required
+def validate_draft(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    issues = _validation_issues(listing)
+    flash("Validation passed; approval is still required." if not issues else f"Validation found {len(issues)} blocking issue(s).", "success" if not issues else "error")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/approve")
+@login_required
+def approve_listing(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    issues = _validation_issues(listing)
+    if issues:
+        flash("Listing cannot be approved until every validation error is resolved.", "error")
+    elif listing.status == ListingStatus.DRAFT:
+        listing.transition_to(ListingStatus.READY)
+        db.session.commit()
+        flash("Listing approved and marked READY.", "success")
+    elif listing.status == ListingStatus.READY:
+        flash("Listing is already approved and READY.", "success")
+    else:
+        flash(f"Listing in {listing.status} cannot be approved.", "error")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/return-to-draft")
+@login_required
+def return_to_draft(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    if listing.status == ListingStatus.READY:
+        listing.transition_to(ListingStatus.DRAFT)
+        db.session.commit()
+        flash("Listing returned to DRAFT.", "success")
+    else:
+        flash("Only an approved READY listing can be returned to draft.", "error")
     return redirect(url_for("listings.detail", listing_id=listing.id))
 
 

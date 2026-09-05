@@ -20,6 +20,14 @@
   <p class="muted">Raw and parsed AI responses are retained locally for debugging/audit.</p>
   {% else %}<p class="muted">AI analysis never publishes automatically. Review and edit every generated field.</p>{% endif %}
 </section>
+<section class="card validation-card">
+  <div class="page-head"><div><span class="eyebrow">APPROVAL READINESS</span><h2>{{ 'Approved · READY' if listing.status == 'READY' else 'Draft review required' }}</h2><p class="muted">Passing validation does not approve the listing. Approval is an explicit action.</p></div>
+  <form method="post" action="{{ url_for('listings.validate_draft', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-white">Run Validation</button></form></div>
+  {% if validation_issues %}<div class="missing-required"><strong>Blocking validation errors</strong><ul>{% for issue in validation_issues %}<li><strong>{{ issue.field|replace('_', ' ')|title }}:</strong> {{ issue.message }}</li>{% endfor %}</ul></div>
+  <form method="post" action="{{ url_for('listings.approve_listing', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger" disabled>Fix errors before approval</button></form>
+  {% elif listing.status == 'READY' %}<form method="post" action="{{ url_for('listings.return_to_draft', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lilac">Return to Draft</button></form>
+  {% else %}<form method="post" action="{{ url_for('listings.approve_listing', listing_id=listing.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-cyan">Approve Listing · Mark READY</button></form>{% endif %}
+</section>
 <section class="card copy-card">
   <div class="page-head"><div><span class="eyebrow">LISTING COPY</span><h2>Generated copy</h2><p class="muted">Generated from saved listing details, taxonomy specifics, notes, and visible observations. Review and edit before use.</p></div></div>
   <form method="post" action="{{ url_for('listings.save_copy', listing_id=listing.id) }}" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

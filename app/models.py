@@ -80,6 +80,13 @@ class Listing(db.Model):
             raise ValueError(f"Invalid listing transition: {self.status} -> {new_status}")
         self.status = new_status
 
+    def invalidate_approval(self) -> bool:
+        """Return an approved listing to DRAFT before a material change."""
+        if self.status == ListingStatus.READY:
+            self.status = ListingStatus.DRAFT
+            return True
+        return False
+
     @property
     def price_display(self):
         if self.final_price is None:

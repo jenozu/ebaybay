@@ -472,43 +472,53 @@ The review page contains a complete, editable listing draft with title, descript
 
 Prevent broken or incomplete drafts from reaching eBay staging.
 
+**Phase status:** COMPLETE — certified by deterministic validation/approval tests and full regression coverage. No schema migration was required.
+
 ## Local validation
 
-- [ ] Require at least one image.
-- [ ] Require title.
-- [ ] Require condition.
-- [ ] Require quantity > 0.
-- [ ] Require final price > 0.
-- [ ] Require category.
-- [ ] Require unique SKU.
+- [x] Require at least one image.
+- [x] Require title.
+- [x] Require condition.
+- [x] Require quantity > 0.
+- [x] Require final price > 0.
+- [x] Require category.
+- [x] Require unique SKU.
 
 ## eBay metadata validation
 
-- [ ] Validate mandatory category aspects.
-- [ ] Validate selected payment policy.
-- [ ] Validate selected fulfillment policy.
-- [ ] Validate selected return policy.
-- [ ] Validate inventory location.
-- [ ] Validate marketplace.
-- [ ] Validate listing format.
+- [x] Validate mandatory category aspects.
+- [x] Validate selected payment policy.
+- [x] Validate selected fulfillment policy.
+- [x] Validate selected return policy.
+- [x] Validate inventory location.
+- [x] Validate marketplace.
+- [x] Validate listing format.
 
 ## Logical validation
 
-- [ ] Validate title length.
-- [ ] Validate price precision.
-- [ ] Validate condition/category compatibility where applicable.
-- [ ] Validate image status before staging.
-- [ ] Validate OAuth/eBay connection usable.
-- [ ] Return structured field-specific errors.
+- [x] Validate title length.
+- [x] Validate price precision.
+- [x] Validate condition/category compatibility where applicable.
+- [x] Validate image status before staging.
+- [x] Validate OAuth/eBay connection usable.
+- [x] Return structured field-specific errors.
 
 ## Approval workflow
 
-- [ ] Add grouped validation errors to UI.
-- [ ] Add Approve Listing action.
-- [ ] Only valid listing can become `READY`.
-- [ ] Prevent AI auto-overwrite after approval.
-- [ ] Allow Return to Draft.
-- [ ] Add state-transition tests.
+- [x] Add grouped validation errors to UI.
+- [x] Add Approve Listing action.
+- [x] Only valid listing can become `READY`.
+- [x] Prevent AI auto-overwrite after approval.
+- [x] Allow Return to Draft.
+- [x] Add state-transition tests.
+
+## Completion evidence
+
+- Full suite: 68 tests passed, including Phase 1–6 and OAuth regression coverage.
+- Migration: no migration required; approval state is represented by the existing persisted `DRAFT`/`READY` listing status.
+- Deterministic validation tests cover saved images, title, condition, quantity, price/precision, category, SKU, required aspects, seller policy/location/marketplace/format configuration, and local OAuth-token usability.
+- Approval tests cover invalid rejection, explicit valid approval, protected routes, return-to-draft, material-edit invalidation, and blocking AI analysis while approved.
+- Category-specific condition compatibility has no additional local rule in the stored eBay metadata; the validator enforces the selected condition and selected category and is reusable for later official compatibility metadata.
 
 ## Definition of Done
 
