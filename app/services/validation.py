@@ -1,10 +1,10 @@
 """Reusable deterministic validation for listing approval and later staging."""
-import json
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from ..models import Listing
+from .ebay.oauth import get_oauth_service
 
 
 @dataclass(frozen=True)
@@ -47,11 +47,6 @@ def validate_listing(listing: Listing, *, config: dict, upload_dir: Path, sku_ex
         required(config.get(key), key.lower(), f"Configure a {label} before approval.")
     if config.get("EBAY_LISTING_FORMAT") not in {"FIXED_PRICE", "AUCTION"}:
         issues.append(ValidationIssue("listing_format", "Listing format must be FIXED_PRICE or AUCTION."))
-    token_path = Path(config["EBAY_TOKEN_PATH"])
-    try:
-        token = json.loads(token_path.read_text(encoding="utf-8"))
-        if not token.get("access_token"):
-            raise ValueError
-    except (OSError, ValueError, json.JSONDecodeError):
+    if not get_oauth_service(config).has_usable_connection():
         issues.append(ValidationIssue("oauth", "A usable saved eBay OAuth access token is required before approval."))
     return issues

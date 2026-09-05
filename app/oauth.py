@@ -1,64 +1,77 @@
-import json
-import os
+"""Authenticated Settings and eBay seller-connection routes."""
+import secrets
 
-import requests
-from flask import Blueprint, current_app, request
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+
+from .auth import login_required
+from .services.ebay.oauth import OAuthError, get_oauth_service
 
 bp = Blueprint("oauth", __name__)
+_STATE_KEY = "ebay_oauth_state"
 
 
 @bp.get("/privacy")
 def privacy():
-    return """
-    <h1>Privacy Policy</h1>
-    <p>This is a private development application used to authenticate with eBay
-    and perform seller-authorized API actions.</p>
-    <p>Credentials and OAuth tokens are not intentionally shared with third parties.</p>
-    """
+    return "<h1>Privacy Policy</h1><p>This private application stores seller authorization credentials securely.</p>"
+
+
+@bp.get("/settings/ebay")
+@login_required
+def settings():
+    service = get_oauth_service()
+    try:
+        connection = service.import_legacy_token() or service.connection()
+    except OAuthError:
+        connection = service.connection()
+        flash("A legacy eBay token could not be imported. Reconnect the seller account.", "error")
+    return render_template("ebay_settings.html", connection=connection)
+
+
+@bp.post("/settings/ebay/connect")
+@login_required
+def connect():
+    state = secrets.token_urlsafe(32)
+    session[_STATE_KEY] = state
+    try:
+        return redirect(get_oauth_service().authorization_url(state))
+    except OAuthError as exc:
+        session.pop(_STATE_KEY, None)
+        flash(str(exc), "error")
+        return redirect(url_for("oauth.settings"))
 
 
 @bp.get("/oauth/callback")
+@login_required
 def oauth_callback():
+    expected_state = session.pop(_STATE_KEY, None)  # one-time even on mismatch
+    returned_state = request.args.get("state")
+    if not expected_state or not returned_state or not secrets.compare_digest(expected_state, returned_state):
+        return render_template("oauth_callback_error.html", message="The eBay connection request could not be verified. Start a new connection request."), 400
+    if request.args.get("error"):
+        return render_template("oauth_callback_error.html", message="eBay authorization was declined or cancelled. No connection was changed."), 400
     code = request.args.get("code")
     if not code:
-        return "OAuth callback received, but no authorization code was provided.", 400
-
-    token_endpoint = (
-        "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
-        if current_app.config["EBAY_ENVIRONMENT"] == "sandbox"
-        else "https://api.ebay.com/identity/v1/oauth2/token"
-    )
+        return render_template("oauth_callback_error.html", message="eBay did not return an authorization code. Start a new connection request."), 400
     try:
-        response = requests.post(
-            token_endpoint,
-            auth=(current_app.config["EBAY_CLIENT_ID"], current_app.config["EBAY_CLIENT_SECRET"]),
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={"grant_type": "authorization_code", "code": code, "redirect_uri": current_app.config["EBAY_RUNAME"]},
-            timeout=30,
-        )
-        data = response.json()
-    except Exception as exc:
-        return f"<h1>eBay OAuth Failed</h1><p>Token request failed: {type(exc).__name__}</p>", 500
-
-    if response.ok and data.get("access_token") and data.get("refresh_token"):
-        token_path = current_app.config["EBAY_TOKEN_PATH"]
-        token_path.parent.mkdir(parents=True, exist_ok=True)
-        token_path.write_text(json.dumps(data), encoding="utf-8")
-        os.chmod(token_path, 0o600)
-        return """
-        <h1>eBay OAuth Success</h1>
-        <p>Access token received: YES</p>
-        <p>Refresh token received: YES</p>
-        <p>The tokens were saved securely on the VPS.</p>
-        """
-
-    return f"""
-    <h1>eBay OAuth Failed</h1>
-    <p>Error: {data.get('error', 'unknown')}</p>
-    <p>Description: {data.get('error_description', 'No description provided')}</p>
-    """, 400
+        get_oauth_service().complete_authorization(code)
+    except OAuthError as exc:
+        flash(str(exc), "error")
+    else:
+        flash("eBay seller account connected.", "success")
+    return redirect(url_for("oauth.settings"))
 
 
 @bp.get("/oauth/declined")
+@login_required
 def oauth_declined():
-    return "<h1>eBay authorization declined</h1><p>The seller did not grant access.</p>"
+    session.pop(_STATE_KEY, None)
+    flash("eBay authorization was declined.", "error")
+    return redirect(url_for("oauth.settings"))
+
+
+@bp.post("/settings/ebay/disconnect")
+@login_required
+def disconnect():
+    get_oauth_service().disconnect()
+    flash("eBay seller account disconnected locally.", "success")
+    return redirect(url_for("oauth.settings"))

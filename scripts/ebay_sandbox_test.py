@@ -1,31 +1,26 @@
-import json
-import os
-from pathlib import Path
-
 import requests
-
-TOKEN_PATH = Path(os.getenv("EBAY_TOKEN_PATH", "data/token.json"))
-BASE_URL = "https://api.sandbox.ebay.com"
+from app import create_app
+from app.services.ebay.oauth import OAuthError, get_oauth_service
 
 
 def main():
-    if not TOKEN_PATH.exists():
-        raise SystemExit(f"Token file not found: {TOKEN_PATH}")
-
-    data = json.loads(TOKEN_PATH.read_text(encoding="utf-8"))
-    access_token = data.get("access_token")
-    if not access_token:
-        raise SystemExit("No access_token found in token file")
-
-    response = requests.get(
-        f"{BASE_URL}/sell/inventory/v1/getVersion",
-        headers={"Authorization": f"Bearer {access_token}"},
-        timeout=30,
-    )
+    app = create_app()
+    with app.app_context():
+        if app.config["EBAY_ENVIRONMENT"] != "sandbox":
+            raise SystemExit("This smoke check is Sandbox-only.")
+        try:
+            access_token = get_oauth_service().get_access_token()
+        except OAuthError as exc:
+            raise SystemExit(str(exc)) from exc
+        response = requests.get(
+            "https://api.sandbox.ebay.com/sell/inventory/v1/getVersion",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=app.config["EBAY_HTTP_TIMEOUT_SECONDS"],
+        )
 
     print("HTTP status:", response.status_code)
     if response.ok:
-        print("Inventory API response:", response.text)
+        print("Inventory API response received.")
     else:
         print("Inventory API request failed")
         raise SystemExit(1)

@@ -10,7 +10,7 @@ def app(tmp_path):
     database = tmp_path / "test.db"
     uploads = tmp_path / "uploads"
     token = tmp_path / "token.json"
-    app = create_app({"TESTING": True, "WTF_CSRF_ENABLED": False, "SESSION_COOKIE_SECURE": False, "SECRET_KEY": "test-secret", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{database}", "UPLOAD_DIR": uploads, "APP_USERNAME": "admin", "APP_PASSWORD_HASH": generate_password_hash("correct horse battery staple"), "EBAY_CLIENT_ID": "client-id", "EBAY_CLIENT_SECRET": "client-secret", "EBAY_RUNAME": "runame", "EBAY_TOKEN_PATH": token})
+    app = create_app({"TESTING": True, "WTF_CSRF_ENABLED": False, "SESSION_COOKIE_SECURE": False, "SECRET_KEY": "test-secret", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{database}", "UPLOAD_DIR": uploads, "APP_USERNAME": "admin", "APP_PASSWORD_HASH": generate_password_hash("correct horse battery staple"), "EBAY_CLIENT_ID": "client-id", "EBAY_CLIENT_SECRET": "client-secret", "EBAY_RUNAME": "runame", "EBAY_TOKEN_PATH": token, "EBAY_TOKEN_ENCRYPTION_KEY": "OUQxY9tKooYQgtzMO1FCPaOeT8VGdrz7BpwVeODDcQY="})
     with app.app_context():
         db.create_all()
     yield app

@@ -1,15 +1,15 @@
-import json
 from decimal import Decimal
 
 from app.extensions import db
 from app.models import Listing, ListingImage, ListingStatus
 from app.services.validation import validate_listing
+from app.services.ebay.oauth import OAuthService
 
 
 def setup_valid(app, tmp_path):
-    token = tmp_path / "token.json"; token.write_text(json.dumps({"access_token": "test"}))
-    app.config.update(EBAY_TOKEN_PATH=token, EBAY_PAYMENT_POLICY_ID="pay", EBAY_FULFILLMENT_POLICY_ID="ship", EBAY_RETURN_POLICY_ID="returns", EBAY_MERCHANT_LOCATION_KEY="warehouse")
+    app.config.update(EBAY_PAYMENT_POLICY_ID="pay", EBAY_FULFILLMENT_POLICY_ID="ship", EBAY_RETURN_POLICY_ID="returns", EBAY_MERCHANT_LOCATION_KEY="warehouse")
     with app.app_context():
+        OAuthService(app.config).save_token_response({"access_token": "test", "refresh_token": "refresh", "expires_in": 7200}, require_refresh=True)
         listing = Listing(sku="APPROVE-1", title="Acme Widget", condition="Used", quantity=1, final_price=Decimal("10.00"), ebay_category_id="123")
         path = app.config["UPLOAD_DIR"] / "approval.jpg"; path.write_bytes(b"x")
         listing.images.append(ListingImage(filename="approval.jpg", original_filename="approval.jpg", mime_type="image/jpeg", size_bytes=1))

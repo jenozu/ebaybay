@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}eBay Settings · eBayBay{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">SETTINGS</span><h1>eBay connection</h1><p class="muted">Seller authorization is required only for seller-facing eBay actions.</p></div></div>
+<section class="card"><div class="detail-grid"><div><strong>eBay</strong><p>{{ 'Connected' if connection and connection.status == 'CONNECTED' else 'Disconnected' }}</p></div><div><strong>Marketplace</strong><p>{{ config.EBAY_MARKETPLACE_ID }}</p></div><div><strong>Environment</strong><p>{{ config.EBAY_ENVIRONMENT|title }}</p></div></div>
+{% if connection and connection.status == 'CONNECTED' %}<p class="muted">Connected {{ connection.connected_at.strftime('%Y-%m-%d %H:%M UTC') if connection.connected_at else '' }}. Tokens and client credentials are never displayed.</p><div class="actions"><form method="post" action="{{ url_for('oauth.connect') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-cyan">Reconnect eBay</button></form><form method="post" action="{{ url_for('oauth.disconnect') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Disconnect eBay</button></form></div>{% else %}<form method="post" action="{{ url_for('oauth.connect') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-cyan">Connect eBay</button></form>{% endif %}
+</section>
+{% endblock %}

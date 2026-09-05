@@ -12,7 +12,8 @@ from .forms import ListingForm
 from .models import ComparableListing, Listing, ListingImage, ListingStatus, utcnow
 from .services.ebay.browse import BrowseClient, BrowseError, search_active_comparables
 from .services.ebay.taxonomy import CategoryCandidate, TaxonomyClient, TaxonomyError, select_category, taxonomy_query
-from .services.ebay.tokens import EbayTokenError, load_access_token
+from .services.ebay.tokens import EbayTokenError
+from .services.ebay.oauth import get_oauth_service
 from .services.pricing import calculate_pricing, strongest_comparables
 from .services.writer import generate_condition_description, generate_description, generate_title
 from .services.validation import validate_listing
@@ -41,7 +42,7 @@ def _taxonomy_client() -> TaxonomyClient:
         marketplace_id=config["EBAY_MARKETPLACE_ID"],
         api_base=config["EBAY_API_BASE"],
         timeout=config["EBAY_HTTP_TIMEOUT_SECONDS"],
-        access_token_provider=lambda: load_access_token(config["EBAY_TOKEN_PATH"]),
+        access_token_provider=lambda: get_oauth_service().get_access_token(),
     )
 
 
@@ -50,7 +51,7 @@ def _browse_client() -> BrowseClient:
     return BrowseClient(
         environment=config["EBAY_ENVIRONMENT"], marketplace_id=config["EBAY_MARKETPLACE_ID"],
         api_base=config["EBAY_API_BASE"], timeout=config["EBAY_HTTP_TIMEOUT_SECONDS"],
-        access_token_provider=lambda: load_access_token(config["EBAY_TOKEN_PATH"]),
+        access_token_provider=lambda: get_oauth_service().get_access_token(),
     )
 
 

@@ -545,23 +545,23 @@ Integrate the proven OAuth foundation into the actual application as a maintaina
 
 ## Main-app integration still required
 
-- [ ] Build Settings / Connect eBay page.
-- [ ] Move OAuth logic into `app/services/ebay/oauth.py`.
-- [ ] Generate state/CSRF value and verify it on callback.
-- [ ] Store connection metadata in application database.
-- [ ] Encrypt refresh token at rest where practical.
-- [ ] Track access-token expiration.
-- [ ] Implement reusable `get_access_token()` helper.
-- [ ] Automatically refresh before/after expiry as appropriate.
-- [ ] Persist renewed token metadata safely.
-- [ ] Add Connected / Disconnected UI state.
-- [ ] Display marketplace `EBAY_CA`.
-- [ ] Display environment `Sandbox`.
-- [ ] Add disconnect/reconnect.
-- [ ] Handle revoked authorization.
-- [ ] Ensure no tokens enter application logs/error pages.
-- [ ] Add OAuth mocks/tests.
-- [ ] Add Sandbox integration test through main app.
+- [x] Build Settings / Connect eBay page.
+- [x] Move OAuth logic into `app/services/ebay/oauth.py`.
+- [x] Generate state/CSRF value and verify it on callback.
+- [x] Store connection metadata in application database.
+- [x] Encrypt refresh token at rest where practical.
+- [x] Track access-token expiration.
+- [x] Implement reusable `get_access_token()` helper.
+- [x] Automatically refresh before/after expiry as appropriate.
+- [x] Persist renewed token metadata safely.
+- [x] Add Connected / Disconnected UI state.
+- [x] Display marketplace `EBAY_CA`.
+- [x] Display environment `Sandbox`.
+- [x] Add disconnect/reconnect.
+- [x] Handle revoked authorization.
+- [x] Ensure no tokens enter application logs/error pages.
+- [x] Add OAuth mocks/tests.
+- [x] Add Sandbox integration test through main app.
 
 ## Definition of Done
 
@@ -574,6 +574,13 @@ Environment: Sandbox
 ```
 
 and all seller API clients obtain/refresh tokens through the shared OAuth service automatically.
+
+## Completion evidence
+
+- Phase 8 certified locally with 75 passed, 1 opt-in Sandbox smoke test skipped.
+- Migration `0006_phase8_oauth_connection.py` passes both the full fresh-database chain and upgrade from the Phase 7 revision.
+- Deterministic tests cover OAuth state validation/reuse, encrypted token persistence, expiry refresh, revoked authorization, Settings connection controls, CSRF, and Taxonomy/Browse shared-token integration.
+- The live Sandbox smoke test exercises the main application OAuth service when `RUN_EBAY_SANDBOX_INTEGRATION=1`; browser consent/reconnection and VPS deployment remain external verification.
 
 ---
 

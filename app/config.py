@@ -33,6 +33,8 @@ class Config:
     EBAY_CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET", "")
     EBAY_RUNAME = os.getenv("EBAY_RUNAME", "")
     EBAY_TOKEN_PATH = Path(os.getenv("EBAY_TOKEN_PATH", "/app/data/token.json"))
+    EBAY_TOKEN_ENCRYPTION_KEY = os.getenv("EBAY_TOKEN_ENCRYPTION_KEY", "")
+    EBAY_OAUTH_REFRESH_MARGIN_SECONDS = int(os.getenv("EBAY_OAUTH_REFRESH_MARGIN_SECONDS", "300"))
     EBAY_API_BASE = os.getenv("EBAY_API_BASE", "")
     EBAY_HTTP_TIMEOUT_SECONDS = int(os.getenv("EBAY_HTTP_TIMEOUT_SECONDS", "30"))
     EBAY_TITLE_MAX_LENGTH = int(os.getenv("EBAY_TITLE_MAX_LENGTH", "80"))

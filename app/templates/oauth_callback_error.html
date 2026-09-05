@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}eBay Connection Error · eBayBay{% endblock %}
+{% block content %}<section class="card"><h1>eBay connection not completed</h1><p>{{ message }}</p><a class="btn btn-cyan" href="{{ url_for('oauth.settings') }}">Return to Settings</a></section>{% endblock %}
