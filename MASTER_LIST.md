@@ -629,22 +629,30 @@ Move approved local listing images to eBay and persist returned image resources.
 
 ## Tasks
 
-- [ ] Confirm exact Media API scope/requirements from current eBay docs before implementation.
-- [ ] Create `app/services/ebay/media.py`.
-- [ ] Upload approved local images.
-- [ ] Capture eBay image/resource ID.
-- [ ] Capture EPS/eBay-hosted image URL.
-- [ ] Store both on ListingImage.
-- [ ] Preserve image order.
-- [ ] Show upload status.
-- [ ] Retry transient errors safely.
-- [ ] Make retry idempotent/avoid duplicate upload where possible.
-- [ ] Add mocked tests.
-- [ ] Add Sandbox integration test.
+- [x] Confirm exact Media API scope/requirements from current eBay docs before implementation.
+- [x] Create `app/services/ebay/media.py`.
+- [x] Upload approved local images.
+- [x] Capture eBay image/resource ID.
+- [x] Capture EPS/eBay-hosted image URL.
+- [x] Store both on ListingImage.
+- [x] Preserve image order.
+- [x] Show upload status.
+- [x] Retry transient errors safely.
+- [x] Make retry idempotent/avoid duplicate upload where possible.
+- [x] Add mocked tests.
+- [x] Add Sandbox integration test.
 
 ## Definition of Done
 
 Approved local images have usable eBay-hosted image URLs stored on the draft.
+
+## Completion evidence
+
+- Phase 10 certified locally with 83 passed and 3 opt-in Sandbox integration tests skipped.
+- Migration `0008_phase10_media_upload.py` passes upgrade from the Phase 9 revision and the full fresh-database migration chain.
+- Mocked Media API coverage verifies the documented Sandbox endpoint, shared OAuth token, binary MIME upload, returned image ID/URL persistence, bounded transient retry, non-transient failure, fingerprint idempotency, image ordering, approved-only UI/action, and CSRF/authentication regression coverage.
+- The existing `sell.inventory` OAuth scope is sufficient for the Media image endpoint; no new consent scope was added.
+- The opt-in Sandbox Media test uses the main application OAuth and Media services when `RUN_EBAY_SANDBOX_INTEGRATION=1` and `EBAY_SANDBOX_MEDIA_TEST_IMAGE` are set.
 
 ---
 

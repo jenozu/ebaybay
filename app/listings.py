@@ -14,6 +14,7 @@ from .services.ebay.browse import BrowseClient, BrowseError, search_active_compa
 from .services.ebay.taxonomy import CategoryCandidate, TaxonomyClient, TaxonomyError, select_category, taxonomy_query
 from .services.ebay.tokens import EbayTokenError
 from .services.ebay.oauth import get_oauth_service
+from .services.ebay.media import MediaServiceError, get_media_service
 from .services.pricing import calculate_pricing, strongest_comparables
 from .services.writer import generate_condition_description, generate_description, generate_title
 from .services.validation import validate_listing
@@ -305,6 +306,19 @@ def refresh_comparables(listing_id):
         flash(str(exc), "error")
     else:
         flash(f"Active comparables updated: {len(scored)} relevant listings retained.", "success")
+    return redirect(url_for("listings.detail", listing_id=listing.id))
+
+
+@bp.post("/listings/<int:listing_id>/images/upload")
+@login_required
+def upload_images_to_ebay(listing_id):
+    listing = db.get_or_404(Listing, listing_id)
+    try:
+        uploaded, skipped = get_media_service().upload_listing_images(listing, Path(current_app.config["UPLOAD_DIR"]))
+    except (EbayTokenError, MediaServiceError) as exc:
+        flash(str(exc), "error")
+    else:
+        flash(f"eBay image upload complete: {uploaded} uploaded, {skipped} already current.", "success")
     return redirect(url_for("listings.detail", listing_id=listing.id))
 
 

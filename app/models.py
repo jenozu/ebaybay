@@ -103,6 +103,12 @@ class ListingImage(db.Model):
     mime_type = db.Column(db.String(128), nullable=False)
     size_bytes = db.Column(db.Integer, nullable=False)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
+    ebay_image_id = db.Column(db.String(128), nullable=True)
+    ebay_image_url = db.Column(db.Text, nullable=True)
+    ebay_upload_status = db.Column(db.String(32), nullable=False, default="PENDING")
+    ebay_upload_error = db.Column(db.String(255), nullable=True)
+    ebay_upload_fingerprint = db.Column(db.String(64), nullable=True)
+    ebay_uploaded_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     listing = db.relationship("Listing", back_populates="images")
 
