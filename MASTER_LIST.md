@@ -699,29 +699,35 @@ Create the unpublished marketplace Offer tied to the Inventory Item.
 
 ## Tasks
 
-- [ ] Build Offer payload.
-- [ ] Add SKU.
-- [ ] Add category ID.
-- [ ] Add marketplace `EBAY_CA`.
-- [ ] Add quantity.
-- [ ] Add price/currency.
-- [ ] Add fixed-price listing format.
-- [ ] Add listing duration.
-- [ ] Add payment policy ID.
-- [ ] Add fulfillment policy ID.
-- [ ] Add return policy ID.
-- [ ] Add merchant location key.
-- [ ] Call Create Offer.
-- [ ] Store `offer_id`.
-- [ ] Set internal state `EBAY_STAGED`.
-- [ ] Surface staging errors clearly.
-- [ ] Prevent duplicate/conflicting offers on retry.
-- [ ] Add mocked tests.
-- [ ] Add Sandbox integration test.
+- [x] Build Offer payload.
+- [x] Add SKU.
+- [x] Add category ID.
+- [x] Add marketplace `EBAY_CA`.
+- [x] Add quantity.
+- [x] Add price/currency.
+- [x] Add fixed-price listing format.
+- [x] Add listing duration.
+- [x] Add payment policy ID.
+- [x] Add fulfillment policy ID.
+- [x] Add return policy ID.
+- [x] Add merchant location key.
+- [x] Call Create Offer.
+- [x] Store `offer_id`.
+- [x] Set internal state `EBAY_STAGED`.
+- [x] Surface staging errors clearly.
+- [x] Prevent duplicate/conflicting offers on retry.
+- [x] Add mocked tests.
+- [x] Add Sandbox integration test.
 
 ## Definition of Done
 
 The app stores a valid unpublished Offer ID and the listing is `EBAY_STAGED`.
+
+### Completion evidence
+
+- Phase 12 certified locally with 91 passed and 5 opt-in Sandbox integration tests skipped. Deterministic coverage verifies the exact unpublished Offer payload, seller-default reuse, shared OAuth token use, Sandbox endpoint, persisted offer ID/state, UI/auth protection, and duplicate/unknown-outcome handling.
+- Migration `0010_phase12_offer_staging` was verified from the Phase 11 schema and through a fresh full migration chain.
+- The opt-in Sandbox Offer test uses the main OAuth and Offer services when `RUN_EBAY_SANDBOX_INTEGRATION=1`; it requires a pre-staged Inventory Item, connected seller defaults, and `EBAY_SANDBOX_CATEGORY_ID`.
 
 ---
 

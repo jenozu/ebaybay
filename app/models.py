@@ -7,12 +7,13 @@ from .extensions import db
 class ListingStatus:
     DRAFT = "DRAFT"
     READY = "READY"
-    STAGED = "STAGED"
+    STAGED = "STAGED"  # Legacy value retained for existing databases.
+    EBAY_STAGED = "EBAY_STAGED"
     PUBLISHED = "PUBLISHED"
     FAILED = "FAILED"
     ARCHIVED = "ARCHIVED"
-    ALL = {DRAFT, READY, STAGED, PUBLISHED, FAILED, ARCHIVED}
-    TRANSITIONS = {DRAFT: {READY, ARCHIVED}, READY: {DRAFT, STAGED, ARCHIVED}, STAGED: {READY, PUBLISHED, FAILED}, FAILED: {DRAFT, READY, ARCHIVED}, PUBLISHED: set(), ARCHIVED: {DRAFT}}
+    ALL = {DRAFT, READY, STAGED, EBAY_STAGED, PUBLISHED, FAILED, ARCHIVED}
+    TRANSITIONS = {DRAFT: {READY, ARCHIVED}, READY: {DRAFT, STAGED, EBAY_STAGED, ARCHIVED}, STAGED: {READY, PUBLISHED, FAILED}, EBAY_STAGED: {READY, PUBLISHED, FAILED}, FAILED: {DRAFT, READY, ARCHIVED}, PUBLISHED: set(), ARCHIVED: {DRAFT}}
 
 
 def utcnow():
@@ -67,6 +68,11 @@ class Listing(db.Model):
     ebay_inventory_error = db.Column(db.String(255), nullable=True)
     ebay_inventory_payload_fingerprint = db.Column(db.String(64), nullable=True)
     ebay_inventory_staged_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    ebay_offer_id = db.Column(db.String(128), nullable=True)
+    ebay_offer_status = db.Column(db.String(32), nullable=False, default="NOT_STAGED")
+    ebay_offer_error = db.Column(db.String(255), nullable=True)
+    ebay_offer_payload_fingerprint = db.Column(db.String(64), nullable=True)
+    ebay_offer_staged_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
     images = db.relationship("ListingImage", back_populates="listing", cascade="all, delete-orphan", order_by="ListingImage.sort_order")
