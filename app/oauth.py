@@ -5,6 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from .auth import login_required
 from .services.ebay.oauth import OAuthError, get_oauth_service
+from .services.ebay.account import AccountServiceError, cached_options, refresh_cached_options, save_defaults
 
 bp = Blueprint("oauth", __name__)
 _STATE_KEY = "ebay_oauth_state"
@@ -24,7 +25,7 @@ def settings():
     except OAuthError:
         connection = service.connection()
         flash("A legacy eBay token could not be imported. Reconnect the seller account.", "error")
-    return render_template("ebay_settings.html", connection=connection)
+    return render_template("ebay_settings.html", connection=connection, options=cached_options(connection))
 
 
 @bp.post("/settings/ebay/connect")
@@ -74,4 +75,28 @@ def oauth_declined():
 def disconnect():
     get_oauth_service().disconnect()
     flash("eBay seller account disconnected locally.", "success")
+    return redirect(url_for("oauth.settings"))
+
+
+@bp.post("/settings/ebay/defaults/refresh")
+@login_required
+def refresh_defaults():
+    try:
+        refresh_cached_options(get_oauth_service().config)
+    except (OAuthError, AccountServiceError) as exc:
+        flash(str(exc), "error")
+    else:
+        flash("Available eBay policies and inventory locations refreshed.", "success")
+    return redirect(url_for("oauth.settings"))
+
+
+@bp.post("/settings/ebay/defaults")
+@login_required
+def update_defaults():
+    try:
+        save_defaults(get_oauth_service().config, request.form)
+    except (OAuthError, AccountServiceError) as exc:
+        flash(str(exc), "error")
+    else:
+        flash("Default seller policies and inventory location saved.", "success")
     return redirect(url_for("oauth.settings"))

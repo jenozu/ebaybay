@@ -7,9 +7,11 @@ from app.services.ebay.oauth import OAuthService
 
 
 def setup_valid(app, tmp_path):
-    app.config.update(EBAY_PAYMENT_POLICY_ID="pay", EBAY_FULFILLMENT_POLICY_ID="ship", EBAY_RETURN_POLICY_ID="returns", EBAY_MERCHANT_LOCATION_KEY="warehouse")
     with app.app_context():
-        OAuthService(app.config).save_token_response({"access_token": "test", "refresh_token": "refresh", "expires_in": 7200}, require_refresh=True)
+        connection = OAuthService(app.config).save_token_response({"access_token": "test", "refresh_token": "refresh", "expires_in": 7200}, require_refresh=True)
+        connection.default_payment_policy_id = "pay"; connection.default_fulfillment_policy_id = "ship"; connection.default_return_policy_id = "returns"; connection.default_merchant_location_key = "warehouse"
+        connection.seller_defaults_cache = {"payment_policies": [{"policy_id": "pay"}], "fulfillment_policies": [{"policy_id": "ship"}], "return_policies": [{"policy_id": "returns"}], "inventory_locations": [{"merchant_location_key": "warehouse", "selectable": True}]}
+        db.session.commit()
         listing = Listing(sku="APPROVE-1", title="Acme Widget", condition="Used", quantity=1, final_price=Decimal("10.00"), ebay_category_id="123")
         path = app.config["UPLOAD_DIR"] / "approval.jpg"; path.write_bytes(b"x")
         listing.images.append(ListingImage(filename="approval.jpg", original_filename="approval.jpg", mime_type="image/jpeg", size_bytes=1))

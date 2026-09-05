@@ -592,24 +592,32 @@ Configure reusable seller defaults once rather than per listing.
 
 ## Tasks
 
-- [ ] Create `app/services/ebay/account.py`.
-- [ ] Retrieve payment policies.
-- [ ] Retrieve fulfillment policies.
-- [ ] Retrieve return policies.
-- [ ] Retrieve inventory locations.
-- [ ] Build Settings dropdowns.
-- [ ] Store selected default payment policy ID.
-- [ ] Store selected default fulfillment policy ID.
-- [ ] Store selected default return policy ID.
-- [ ] Store selected merchant location key.
-- [ ] Lock/confirm marketplace `EBAY_CA` for MVP.
-- [ ] Validate missing defaults before staging.
-- [ ] Test selected IDs in Sandbox.
+- [x] Create `app/services/ebay/account.py`.
+- [x] Retrieve payment policies.
+- [x] Retrieve fulfillment policies.
+- [x] Retrieve return policies.
+- [x] Retrieve inventory locations.
+- [x] Build Settings dropdowns.
+- [x] Store selected default payment policy ID.
+- [x] Store selected default fulfillment policy ID.
+- [x] Store selected default return policy ID.
+- [x] Store selected merchant location key.
+- [x] Lock/confirm marketplace `EBAY_CA` for MVP.
+- [x] Validate missing defaults before staging.
+- [x] Test selected IDs in Sandbox.
 - [ ] Optionally add location creation later if retrieval alone is insufficient.
 
 ## Definition of Done
 
 The app can build an offer using saved policy/location defaults without asking the seller on every listing.
+
+## Completion evidence
+
+- Phase 9 certified locally with 79 passed and 2 opt-in Sandbox integration tests skipped.
+- Migration `0007_phase9_seller_defaults.py` passes both upgrade from the Phase 8 revision and the full fresh-database migration chain.
+- Deterministic Account/Inventory mocks cover normalized payment, fulfillment, and return policy retrieval, location pagination, disabled locations, safe errors, Settings persistence, stale selections, and Phase 7 validation.
+- `sell.account` was added to the shared OAuth consent scopes; existing Sandbox authorization must be reconnected externally before Account API calls can succeed.
+- The opt-in Sandbox test verifies retrieved policy/location resources and selected IDs through the shared OAuth service when `RUN_EBAY_SANDBOX_INTEGRATION=1`.
 
 ---
 

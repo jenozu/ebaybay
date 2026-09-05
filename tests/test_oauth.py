@@ -29,7 +29,7 @@ def test_authorization_url_uses_sandbox_and_required_state(app):
     parsed, query = urlparse(url), parse_qs(urlparse(url).query)
     assert parsed.netloc == "auth.sandbox.ebay.com"
     assert query["state"] == ["csrf-state"] and query["response_type"] == ["code"]
-    assert "sell.inventory" in query["scope"][0]
+    assert "sell.inventory" in query["scope"][0] and "sell.account" in query["scope"][0]
 
 
 def test_missing_encryption_key_fails_safely(app):

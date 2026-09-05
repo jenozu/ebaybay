@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ..models import Listing
 from .ebay.oauth import get_oauth_service
+from .ebay.account import defaults_validation_issues
 
 
 @dataclass(frozen=True)
@@ -43,8 +44,9 @@ def validate_listing(listing: Listing, *, config: dict, upload_dir: Path, sku_ex
     for aspect in listing.aspects:
         if aspect.required and not (aspect.value or "").strip():
             issues.append(ValidationIssue("aspects", f"Required item specific is missing: {aspect.name}."))
-    for key, label in (("EBAY_PAYMENT_POLICY_ID", "payment policy"), ("EBAY_FULFILLMENT_POLICY_ID", "fulfillment policy"), ("EBAY_RETURN_POLICY_ID", "return policy"), ("EBAY_MERCHANT_LOCATION_KEY", "inventory location"), ("EBAY_MARKETPLACE_ID", "marketplace")):
-        required(config.get(key), key.lower(), f"Configure a {label} before approval.")
+    required(config.get("EBAY_MARKETPLACE_ID"), "marketplace", "Configure a marketplace before approval.")
+    for field, message in defaults_validation_issues(config):
+        issues.append(ValidationIssue(field, message))
     if config.get("EBAY_LISTING_FORMAT") not in {"FIXED_PRICE", "AUCTION"}:
         issues.append(ValidationIssue("listing_format", "Listing format must be FIXED_PRICE or AUCTION."))
     if not get_oauth_service(config).has_usable_connection():

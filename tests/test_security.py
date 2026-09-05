@@ -24,6 +24,8 @@ def test_csrf_blocks_unprotected_post(tmp_path):
     response = client.post("/login", data={"username": "admin", "password": "correct horse battery staple"})
     assert response.status_code == 400
     assert client.post("/settings/ebay/connect").status_code == 400
+    assert client.post("/settings/ebay/defaults/refresh").status_code == 400
+    assert client.post("/settings/ebay/defaults").status_code == 400
 
 
 def test_no_public_registration_route(client):

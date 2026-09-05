@@ -7,8 +7,11 @@ from app.services.ebay.oauth import OAuthService
 
 
 def ready_config(app, tmp_path):
-    app.config.update(EBAY_PAYMENT_POLICY_ID="pay", EBAY_FULFILLMENT_POLICY_ID="ship", EBAY_RETURN_POLICY_ID="returns", EBAY_MERCHANT_LOCATION_KEY="warehouse", EBAY_LISTING_FORMAT="FIXED_PRICE")
-    OAuthService(app.config).save_token_response({"access_token": "test", "refresh_token": "refresh", "expires_in": 7200}, require_refresh=True)
+    app.config.update(EBAY_LISTING_FORMAT="FIXED_PRICE")
+    connection = OAuthService(app.config).save_token_response({"access_token": "test", "refresh_token": "refresh", "expires_in": 7200}, require_refresh=True)
+    connection.default_payment_policy_id = "pay"; connection.default_fulfillment_policy_id = "ship"; connection.default_return_policy_id = "returns"; connection.default_merchant_location_key = "warehouse"
+    connection.seller_defaults_cache = {"payment_policies": [{"policy_id": "pay"}], "fulfillment_policies": [{"policy_id": "ship"}], "return_policies": [{"policy_id": "returns"}], "inventory_locations": [{"merchant_location_key": "warehouse", "selectable": True}]}
+    db.session.commit()
 
 
 def valid_listing(app):
@@ -40,7 +43,7 @@ def test_validation_returns_specific_errors_for_missing_requirements(app, tmp_pa
 def test_required_aspect_policy_and_oauth_are_blockers(app, tmp_path):
     with app.app_context():
         listing = valid_listing(app); listing.aspects[0].value = None
-        app.config.update(EBAY_PAYMENT_POLICY_ID="", EBAY_FULFILLMENT_POLICY_ID="", EBAY_RETURN_POLICY_ID="", EBAY_MERCHANT_LOCATION_KEY="", EBAY_TOKEN_PATH=tmp_path / "missing.json")
+        app.config.update(EBAY_TOKEN_PATH=tmp_path / "missing.json")
         fields = {issue.field for issue in validate(app, listing)}
         assert {"aspects", "ebay_payment_policy_id", "ebay_fulfillment_policy_id", "ebay_return_policy_id", "ebay_merchant_location_key", "oauth"} <= fields
 

@@ -31,9 +31,11 @@ class OAuthProtocolError(OAuthError):
 
 
 # The base API scope supports the currently used Browse/Taxonomy clients, and
-# sell.inventory covers the proven seller Inventory API smoke check.
+# sell.inventory covers Inventory APIs.  sell.account is required by the
+# Account API policy endpoints, so existing grants must reconnect to add it.
 SELLER_SCOPES = (
     "https://api.ebay.com/oauth/api_scope",
+    "https://api.ebay.com/oauth/api_scope/sell.account",
     "https://api.ebay.com/oauth/api_scope/sell.inventory",
 )
 
