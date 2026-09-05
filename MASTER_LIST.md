@@ -786,7 +786,7 @@ Safely connect a real seller account and intentionally publish one low-risk real
 ## App hardening
 
 - [x] Production login enabled.
-- [ ] HTTPS verified.
+- [x] HTTPS verified.
 - [x] Production debug disabled.
 - [x] Gunicorn configured.
 - [x] Structured logging verified.
@@ -818,6 +818,7 @@ One real listing is generated, reviewed, intentionally published, and recorded s
 - Local production guardrail coverage passes with 99 tests and 6 opt-in Sandbox integration tests skipped. Production startup fails closed without required credentials, encryption, secure sessions, `EBAY_CA`, and a non-default secret.
 - Structured credential-redacting logs, Gunicorn stream logging, SQLite backup/restore tooling, and dry-run-first orphan-upload cleanup are implemented and tested. No schema migration was required.
 - Remaining unchecked Phase 14 items require an actual Production eBay keyset/RuName, HTTPS-enabled VPS deployment, real seller authorization/policies/location, Docker restart verification, and an intentional low-risk real listing. They have not been claimed as complete.
+- Public HTTPS was verified on 2026-09-05 for `/`, `/privacy`, and `/oauth/declined`. The public `/health` endpoint returned 404, so the VPS is serving an older application tree and still needs deployment from GitHub `main` before Production activation.
 
 ---
 
