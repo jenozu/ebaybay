@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from urllib.parse import quote
 
 import requests
 
@@ -76,6 +77,23 @@ class AccountService:
             raise AccountServiceError("eBay returned an invalid seller-settings response.")
         return payload
 
+    def _post(self, path: str, payload: dict) -> None:
+        try:
+            response = self.http.post(
+                f"{self.base_url}{path}",
+                headers={
+                    "Authorization": f"Bearer {self.token_provider()}",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=self.config["EBAY_HTTP_TIMEOUT_SECONDS"],
+            )
+        except requests.RequestException as exc:
+            raise AccountServiceError("eBay inventory location could not be created. Try again later.") from exc
+        if not getattr(response, "ok", False):
+            raise AccountServiceError("eBay inventory location could not be created. Check the location details and try again.")
+
     def _policies(self, path: str, key: str) -> list[PolicyOption]:
         payload = self._get(path, params={"marketplace_id": self.marketplace_id})
         values = payload.get(key, [])
@@ -120,6 +138,52 @@ class AccountService:
             offset += len(locations)
         return results
 
+    def create_inventory_location(self, values: dict) -> str:
+        key = str(values.get("merchant_location_key") or "").strip()
+        name = str(values.get("name") or "").strip()
+        address_line1 = str(values.get("address_line1") or "").strip()
+        city = str(values.get("city") or "").strip()
+        state_or_province = str(values.get("state_or_province") or "").strip()
+        postal_code = str(values.get("postal_code") or "").strip()
+        country = str(values.get("country") or "").strip().upper()
+        location_type = str(values.get("location_type") or "WAREHOUSE").strip().upper()
+        enabled_value = values.get("enabled", True)
+        enabled = enabled_value if isinstance(enabled_value, bool) else str(enabled_value).strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+        if not key or len(key) > 50 or any(char.isspace() for char in key):
+            raise AccountServiceError("Merchant location key is required, must be 50 characters or fewer, and cannot contain spaces.")
+        if not name or len(name) > 128:
+            raise AccountServiceError("Location name is required and must be 128 characters or fewer.")
+        if not address_line1 or len(address_line1) > 128:
+            raise AccountServiceError("Address is required and must be 128 characters or fewer.")
+        if not city or len(city) > 128:
+            raise AccountServiceError("City is required and must be 128 characters or fewer.")
+        if not state_or_province or len(state_or_province) > 128:
+            raise AccountServiceError("State or province is required and must be 128 characters or fewer.")
+        if not postal_code or len(postal_code) > 16:
+            raise AccountServiceError("Postal code is required and must be 16 characters or fewer.")
+        if len(country) != 2 or not country.isalpha():
+            raise AccountServiceError("Country must be a two-letter ISO country code such as CA or US.")
+        if location_type != "WAREHOUSE":
+            raise AccountServiceError("This Settings feature currently creates WAREHOUSE inventory locations only.")
+
+        payload = {
+            "name": name,
+            "location": {
+                "address": {
+                    "addressLine1": address_line1,
+                    "city": city,
+                    "stateOrProvince": state_or_province,
+                    "postalCode": postal_code,
+                    "country": country,
+                }
+            },
+            "locationTypes": [location_type],
+            "merchantLocationStatus": "ENABLED" if enabled else "DISABLED",
+        }
+        self._post(f"/sell/inventory/v1/location/{quote(key, safe='')}", payload)
+        return key
+
     def retrieve_all(self) -> dict:
         return {
             "payment_policies": [item.as_dict() for item in self.payment_policies()],
@@ -149,6 +213,19 @@ def refresh_cached_options(config: dict, service: AccountService | None = None) 
     if connection is None or connection.status != "CONNECTED":
         raise AccountServiceError("eBay is disconnected. Connect the seller account in Settings.")
     options = (service or AccountService(config)).retrieve_all()
+    connection.seller_defaults_cache = options
+    connection.seller_defaults_refreshed_at = utcnow()
+    db.session.commit()
+    return connection, options
+
+
+def refresh_cached_locations(config: dict, service: AccountService | None = None) -> tuple[EbayConnection, dict]:
+    connection = get_oauth_service(config).connection()
+    if connection is None or connection.status != "CONNECTED":
+        raise AccountServiceError("eBay is disconnected. Connect the seller account in Settings.")
+    locations = [item.as_dict() for item in (service or AccountService(config)).inventory_locations()]
+    options = dict(cached_options(connection))
+    options["inventory_locations"] = locations
     connection.seller_defaults_cache = options
     connection.seller_defaults_refreshed_at = utcnow()
     db.session.commit()

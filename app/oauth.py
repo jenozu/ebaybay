@@ -5,7 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from .auth import login_required
 from .services.ebay.oauth import OAuthError, get_oauth_service
-from .services.ebay.account import AccountServiceError, cached_options, refresh_cached_options, save_defaults
+from .services.ebay.account import AccountService, AccountServiceError, cached_options, refresh_cached_locations, refresh_cached_options, save_defaults
 
 bp = Blueprint("oauth", __name__)
 _STATE_KEY = "ebay_oauth_state"
@@ -87,6 +87,21 @@ def refresh_defaults():
         flash(str(exc), "error")
     else:
         flash("Available eBay policies and inventory locations refreshed.", "success")
+    return redirect(url_for("oauth.settings"))
+
+
+@bp.post("/settings/ebay/inventory-locations")
+@login_required
+def create_inventory_location():
+    try:
+        config = get_oauth_service().config
+        service = AccountService(config)
+        key = service.create_inventory_location(request.form)
+        refresh_cached_locations(config, service)
+    except (OAuthError, AccountServiceError) as exc:
+        flash(str(exc), "error")
+    else:
+        flash(f"Inventory location {key} created and refreshed from eBay.", "success")
     return redirect(url_for("oauth.settings"))
 
 

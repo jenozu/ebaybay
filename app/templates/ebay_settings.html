@@ -12,5 +12,17 @@
 <label>Default fulfillment policy<select class="input" name="fulfillment_policy_id" required><option value="">Select fulfillment policy</option>{% for item in options.get('fulfillment_policies', []) %}<option value="{{ item.policy_id }}" {% if item.policy_id == connection.default_fulfillment_policy_id %}selected{% endif %}>{{ item.name }} ({{ item.policy_id }})</option>{% endfor %}</select></label>
 <label>Default return policy<select class="input" name="return_policy_id" required><option value="">Select return policy</option>{% for item in options.get('return_policies', []) %}<option value="{{ item.policy_id }}" {% if item.policy_id == connection.default_return_policy_id %}selected{% endif %}>{{ item.name }} ({{ item.policy_id }})</option>{% endfor %}</select></label>
 <label>Default inventory location<select class="input" name="merchant_location_key" required><option value="">Select inventory location</option>{% for item in options.get('inventory_locations', []) if item.selectable %}<option value="{{ item.merchant_location_key }}" {% if item.merchant_location_key == connection.default_merchant_location_key %}selected{% endif %}>{{ item.name }} ({{ item.merchant_location_key }})</option>{% endfor %}</select></label><button class="btn btn-cyan">Save Seller Defaults</button></form>{% else %}<p class="muted">Refresh from eBay to load available policies and usable inventory locations. Empty results are shown as no selectable defaults.</p>{% endif %}</section>
+<section class="card"><div class="page-head"><div><span class="eyebrow">INVENTORY LOCATION</span><h2>Create eBay inventory location</h2><p class="muted">Creates one shipping warehouse through the connected seller account, then refreshes the cached locations automatically.</p></div></div>
+<form method="post" action="{{ url_for('oauth.create_inventory_location') }}" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<label>Merchant location key<input class="input" name="merchant_location_key" maxlength="50" required autocomplete="off" placeholder="main-warehouse"></label>
+<label>Location name<input class="input" name="name" maxlength="128" required placeholder="Main Warehouse"></label>
+<label>Address<input class="input" name="address_line1" maxlength="128" required autocomplete="street-address"></label>
+<label>City<input class="input" name="city" maxlength="128" required autocomplete="address-level2"></label>
+<label>State / province<input class="input" name="state_or_province" maxlength="128" required autocomplete="address-level1" placeholder="ON"></label>
+<label>Postal code<input class="input" name="postal_code" maxlength="16" required autocomplete="postal-code"></label>
+<label>Country<input class="input" name="country" maxlength="2" minlength="2" required autocomplete="country" value="CA" style="text-transform:uppercase"></label>
+<label>Location type<select class="input" name="location_type" required><option value="WAREHOUSE" selected>WAREHOUSE</option></select></label>
+<label><input type="checkbox" name="enabled" value="1" checked> Enabled on eBay</label>
+<button class="btn btn-cyan">Create Inventory Location</button></form></section>
 {% endif %}
 {% endblock %}
