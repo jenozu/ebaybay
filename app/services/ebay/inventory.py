@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from urllib.parse import quote
 
 import requests
 
@@ -22,6 +23,10 @@ _CONDITIONS = {
     "certified refurbished": "CERTIFIED_REFURBISHED", "for parts or not working": "FOR_PARTS_OR_NOT_WORKING",
 }
 
+_PRODUCT_IDENTIFIER_ERROR = (
+    "GTIN must be a valid UPC-12, EAN-8/EAN-13, ISBN-10/ISBN-13, or left blank."
+)
+
 
 def inventory_condition(value: str | None) -> str | None:
     """Map familiar local condition labels to Inventory API condition enums."""
@@ -29,6 +34,39 @@ def inventory_condition(value: str | None) -> str | None:
         return None
     normalized = " ".join(value.split()).casefold()
     return _CONDITIONS.get(normalized, value.strip().upper().replace(" ", "_"))
+
+
+def _numeric_gtin_checksum_is_valid(value: str) -> bool:
+    if not value.isdigit() or len(value) < 2:
+        return False
+    total = 0
+    for position, digit in enumerate(reversed(value[:-1]), start=1):
+        total += int(digit) * (3 if position % 2 else 1)
+    expected = (10 - (total % 10)) % 10
+    return expected == int(value[-1])
+
+
+def _isbn10_checksum_is_valid(value: str) -> bool:
+    if len(value) != 10 or not value[:9].isdigit() or not (value[-1].isdigit() or value[-1] == "X"):
+        return False
+    digits = [int(char) for char in value[:9]] + [10 if value[-1] == "X" else int(value[-1])]
+    return sum((10 - index) * digit for index, digit in enumerate(digits)) % 11 == 0
+
+
+def product_identifier(value: str | None) -> tuple[str, str] | None:
+    """Return the Inventory API product identifier field and normalized value."""
+    if value is None or not value.strip():
+        return None
+    normalized = value.strip().upper().replace(" ", "").replace("-", "")
+    if len(normalized) == 10 and _isbn10_checksum_is_valid(normalized):
+        return "isbn", normalized
+    if normalized.isdigit() and len(normalized) in {8, 12, 13} and _numeric_gtin_checksum_is_valid(normalized):
+        if len(normalized) == 12:
+            return "upc", normalized
+        if len(normalized) == 13 and normalized.startswith(("978", "979")):
+            return "isbn", normalized
+        return "ean", normalized
+    raise ValueError(_PRODUCT_IDENTIFIER_ERROR)
 
 
 def inventory_payload(listing: Listing) -> dict:
@@ -48,8 +86,13 @@ def inventory_payload(listing: Listing) -> dict:
         product["brand"] = listing.brand
     if listing.mpn:
         product["mpn"] = listing.mpn
-    if listing.gtin:
-        product["ean"] = [listing.gtin]
+    try:
+        identifier = product_identifier(listing.gtin)
+    except ValueError as exc:
+        raise InventoryServiceError(str(exc)) from exc
+    if identifier:
+        field, normalized = identifier
+        product[field] = [normalized]
     return {
         "availability": {"shipToLocationAvailability": {"quantity": listing.quantity}},
         "condition": condition,
@@ -70,6 +113,20 @@ class InventoryService:
             return configured.rstrip("/")
         return "https://api.sandbox.ebay.com" if self.config["EBAY_ENVIRONMENT"].lower() == "sandbox" else "https://api.ebay.com"
 
+    def _headers(self) -> dict[str, str]:
+        headers = {
+            "Authorization": f"Bearer {self.token_provider()}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        # EBAY_CA supports both English and French. This app targets the
+        # English Canadian storefront, so localized Inventory text must be
+        # explicitly identified as en-CA.
+        if self.config.get("EBAY_MARKETPLACE_ID") == "EBAY_CA":
+            headers["Content-Language"] = "en-CA"
+            headers["Accept-Language"] = "en-CA"
+        return headers
+
     def stage(self, listing: Listing) -> bool:
         if listing.status != ListingStatus.READY:
             raise InventoryServiceError("Only an approved READY listing can be staged as eBay inventory.")
@@ -81,8 +138,9 @@ class InventoryService:
         db.session.commit()
         try:
             response = self.http.put(
-                f"{self.base_url}/sell/inventory/v1/inventory_item/{listing.sku}", json=payload,
-                headers={"Authorization": f"Bearer {self.token_provider()}", "Content-Type": "application/json", "Accept": "application/json"},
+                f"{self.base_url}/sell/inventory/v1/inventory_item/{quote(listing.sku, safe='')}",
+                json=payload,
+                headers=self._headers(),
                 timeout=self.config["EBAY_HTTP_TIMEOUT_SECONDS"],
             )
         except requests.RequestException as exc:
