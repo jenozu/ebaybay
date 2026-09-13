@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import time
 from urllib.parse import quote
 
 import requests
@@ -32,6 +33,9 @@ _PRODUCT_IDENTIFIER_ERROR = (
 )
 _SAFE_ERROR_FIELDS = ("errorId", "domain", "category", "message")
 _SAFE_ERROR_TEXT_LIMIT = 300
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+_MAX_ATTEMPTS = 3
+_MAX_RETRY_DELAY_SECONDS = 5.0
 
 
 def inventory_condition(value: str | None) -> str | None:
@@ -105,18 +109,43 @@ def safe_ebay_error_details(response) -> dict[str, str | int]:
     return details
 
 
+def _diagnostic_bits(details: dict[str, str | int]) -> list[str]:
+    bits = []
+    if details.get("status") is not None:
+        bits.append(f"HTTP {details['status']}")
+    if details.get("errorId"):
+        bits.append(f"eBay error {details['errorId']}")
+    if details.get("message"):
+        bits.append(str(details["message"]))
+    return bits
+
+
 def _safe_rejection_message(details: dict[str, str | int]) -> str:
     message = "eBay rejected the inventory item."
-    diagnostic_bits = []
-    if details.get("status") is not None:
-        diagnostic_bits.append(f"HTTP {details['status']}")
-    if details.get("errorId"):
-        diagnostic_bits.append(f"eBay error {details['errorId']}")
-    if details.get("message"):
-        diagnostic_bits.append(str(details["message"]))
+    diagnostic_bits = _diagnostic_bits(details)
     if diagnostic_bits:
         message = f"{message} {' · '.join(diagnostic_bits)}"
     return message
+
+
+def _safe_temporary_failure_message(details: dict[str, str | int]) -> str:
+    message = f"eBay Inventory API was temporarily unavailable after {_MAX_ATTEMPTS} attempts."
+    diagnostic_bits = _diagnostic_bits(details)
+    if diagnostic_bits:
+        message = f"{message} {' · '.join(diagnostic_bits)}"
+    return message
+
+
+def _retry_delay_seconds(response, attempt: int) -> float:
+    """Return a bounded delay, honoring a simple Retry-After seconds header when present."""
+    headers = getattr(response, "headers", None)
+    if headers:
+        retry_after = headers.get("Retry-After")
+        try:
+            return min(max(float(retry_after), 0.0), _MAX_RETRY_DELAY_SECONDS)
+        except (TypeError, ValueError):
+            pass
+    return min(float(attempt), _MAX_RETRY_DELAY_SECONDS)
 
 
 def inventory_payload(listing: Listing) -> dict:
@@ -151,10 +180,11 @@ def inventory_payload(listing: Listing) -> dict:
 
 
 class InventoryService:
-    def __init__(self, config: dict, *, http=None, token_provider=None):
+    def __init__(self, config: dict, *, http=None, token_provider=None, sleeper=None):
         self.config = config
         self.http = http or requests
         self.token_provider = token_provider or (lambda: get_oauth_service(config).get_access_token())
+        self.sleeper = sleeper or time.sleep
 
     @property
     def base_url(self) -> str:
@@ -186,24 +216,60 @@ class InventoryService:
             return False
         listing.ebay_inventory_status, listing.ebay_inventory_error = "STAGING", None
         db.session.commit()
-        try:
-            response = self.http.put(
-                f"{self.base_url}/sell/inventory/v1/inventory_item/{quote(listing.sku, safe='')}",
-                json=payload,
-                headers=self._headers(),
-                timeout=self.config["EBAY_HTTP_TIMEOUT_SECONDS"],
-            )
-        except requests.RequestException as exc:
-            listing.ebay_inventory_status, listing.ebay_inventory_error = "FAILED", "eBay inventory staging was temporarily unavailable."
+
+        url = f"{self.base_url}/sell/inventory/v1/inventory_item/{quote(listing.sku, safe='')}"
+        response = None
+        last_exception = None
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            try:
+                response = self.http.put(
+                    url,
+                    json=payload,
+                    headers=self._headers(),
+                    timeout=self.config["EBAY_HTTP_TIMEOUT_SECONDS"],
+                )
+                last_exception = None
+            except requests.RequestException as exc:
+                last_exception = exc
+                if attempt < _MAX_ATTEMPTS:
+                    logger.warning("eBay Inventory API transport failure; retrying attempt %s/%s", attempt + 1, _MAX_ATTEMPTS)
+                    self.sleeper(min(float(attempt), _MAX_RETRY_DELAY_SECONDS))
+                    continue
+                break
+
+            if getattr(response, "ok", False):
+                break
+
+            status = getattr(response, "status_code", None)
+            if status in _RETRYABLE_STATUS_CODES and attempt < _MAX_ATTEMPTS:
+                details = safe_ebay_error_details(response)
+                logger.warning(
+                    "eBay Inventory API transient failure; retrying attempt %s/%s: %s",
+                    attempt + 1,
+                    _MAX_ATTEMPTS,
+                    json.dumps(details, sort_keys=True),
+                )
+                self.sleeper(_retry_delay_seconds(response, attempt))
+                continue
+            break
+
+        if response is None:
+            listing.ebay_inventory_status = "FAILED"
+            listing.ebay_inventory_error = f"eBay inventory staging was temporarily unavailable after {_MAX_ATTEMPTS} attempts."
             db.session.commit()
-            raise InventoryServiceError(listing.ebay_inventory_error) from exc
+            raise InventoryServiceError(listing.ebay_inventory_error) from last_exception
+
         if not getattr(response, "ok", False):
             details = safe_ebay_error_details(response)
             logger.warning("eBay Inventory API rejected request: %s", json.dumps(details, sort_keys=True))
             listing.ebay_inventory_status = "FAILED"
-            listing.ebay_inventory_error = _safe_rejection_message(details)
+            if getattr(response, "status_code", None) in _RETRYABLE_STATUS_CODES:
+                listing.ebay_inventory_error = _safe_temporary_failure_message(details)
+            else:
+                listing.ebay_inventory_error = _safe_rejection_message(details)
             db.session.commit()
             raise InventoryServiceError(listing.ebay_inventory_error)
+
         listing.ebay_inventory_status = "STAGED"
         listing.ebay_inventory_error = None
         listing.ebay_inventory_payload_fingerprint = fingerprint
