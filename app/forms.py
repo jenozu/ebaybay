@@ -10,6 +10,20 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Sign In")
 
 
+class UploadOnlyMultipleFileField(MultipleFileField):
+    """A file field whose object-backed initial value is always empty.
+
+    ListingForm is initialized with ``obj=listing`` on edit. The Listing model has
+    an ``images`` relationship with the same name as this upload field, but those
+    persisted ListingImage rows are not uploaded files and must never become this
+    field's data. Real files submitted in request form-data still populate the field
+    through WTForms' normal ``process_formdata`` path.
+    """
+
+    def process_data(self, value):
+        self.data = []
+
+
 class ListingForm(FlaskForm):
     title = StringField("Working Title", validators=[Optional(), Length(max=80)])
     original_title = HiddenField()
@@ -26,17 +40,5 @@ class ListingForm(FlaskForm):
     visible_text_text = TextAreaField("Visible Text", validators=[Optional(), Length(max=10000)])
     search_terms_text = TextAreaField("Search Terms", validators=[Optional(), Length(max=10000)])
     attributes_text = TextAreaField("Attributes", validators=[Optional(), Length(max=10000)])
-    images = MultipleFileField("Photos", validators=[FileAllowed(["jpg", "jpeg", "png", "webp"], "JPG, PNG, and WebP images only.")])
+    images = UploadOnlyMultipleFileField("Photos", validators=[FileAllowed(["jpg", "jpeg", "png", "webp"], "JPG, PNG, and WebP images only.")])
     submit = SubmitField("Save Draft")
-
-    def __init__(self, *args, **kwargs):
-        # The Listing model also has an ``images`` relationship. When editing with
-        # ``ListingForm(obj=listing)``, WTForms would otherwise use those persisted
-        # ListingImage rows as the initial value for this upload-only field. If the
-        # user saves without selecting a new file, the route then mistakes the model
-        # rows for FileStorage objects and crashes while trying to read ``.stream``.
-        # Keep existing images on the listing itself; this field represents only new
-        # uploads selected in the current request.
-        if kwargs.get("obj") is not None and "images" not in kwargs:
-            kwargs["images"] = []
-        super().__init__(*args, **kwargs)
