@@ -28,3 +28,15 @@ class ListingForm(FlaskForm):
     attributes_text = TextAreaField("Attributes", validators=[Optional(), Length(max=10000)])
     images = MultipleFileField("Photos", validators=[FileAllowed(["jpg", "jpeg", "png", "webp"], "JPG, PNG, and WebP images only.")])
     submit = SubmitField("Save Draft")
+
+    def __init__(self, *args, **kwargs):
+        # The Listing model also has an ``images`` relationship. When editing with
+        # ``ListingForm(obj=listing)``, WTForms would otherwise use those persisted
+        # ListingImage rows as the initial value for this upload-only field. If the
+        # user saves without selecting a new file, the route then mistakes the model
+        # rows for FileStorage objects and crashes while trying to read ``.stream``.
+        # Keep existing images on the listing itself; this field represents only new
+        # uploads selected in the current request.
+        if kwargs.get("obj") is not None and "images" not in kwargs:
+            kwargs["images"] = []
+        super().__init__(*args, **kwargs)
