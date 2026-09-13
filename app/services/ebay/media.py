@@ -26,10 +26,21 @@ class MediaService:
 
     @property
     def base_url(self) -> str:
-        configured = self.config.get("EBAY_API_BASE")
+        configured = str(self.config.get("EBAY_API_BASE") or "").rstrip("/")
+        # The Media API is served from eBay's apim gateway, not the normal
+        # REST API host. Preserve custom/mock bases, but translate the two
+        # canonical REST hosts so a shared EBAY_API_BASE cannot misroute Media.
+        if configured == "https://api.ebay.com":
+            return "https://apim.ebay.com"
+        if configured == "https://api.sandbox.ebay.com":
+            return "https://apim.sandbox.ebay.com"
         if configured:
-            return configured.rstrip("/")
-        return "https://api.sandbox.ebay.com" if self.config["EBAY_ENVIRONMENT"].lower() == "sandbox" else "https://api.ebay.com"
+            return configured
+        return (
+            "https://apim.sandbox.ebay.com"
+            if self.config["EBAY_ENVIRONMENT"].lower() == "sandbox"
+            else "https://apim.ebay.com"
+        )
 
     @property
     def endpoint(self) -> str:
