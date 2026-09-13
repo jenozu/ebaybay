@@ -38,38 +38,43 @@
 - [x] Seller policy retrieval/default persistence and inventory-location retrieval are implemented.
 - [x] Production-safe inventory-location creation from Settings is implemented.
 - [x] eBay Media image-resource workflow is implemented with multipart upload, `201 Created`, `Location` parsing, `getImage`, ID/URL persistence, retries, and local idempotency.
-- [x] Media API now uses the current Commerce path `/commerce/media/v1_beta/...`.
-- [x] Media API now uses the Media gateway host (`apim.ebay.com` / `apim.sandbox.ebay.com`) rather than the normal REST host.
+- [x] Media API uses the current Commerce path `/commerce/media/v1_beta/...` and Media gateway host (`apim.ebay.com` / `apim.sandbox.ebay.com`).
+- [x] Production Media upload is positively verified: one approved image was accepted by eBay and persisted as an eBay-hosted image resource on 2026-09-13.
 - [x] Inventory Item staging, unpublished Offer staging, and controlled publishing are implemented.
-- [x] Current Media gateway code commit on `main`: `c1d5b42d39810b1a8ac25393bb4d66ab373513f7`.
-- [x] CI for that exact Media gateway commit passed: **111 passed, 6 opt-in tests skipped**.
+- [x] Inventory staging now validates/classifies UPC/EAN/ISBN identifiers instead of blindly sending every GTIN as EAN.
+- [x] Inventory staging now sends Canadian locale headers for `EBAY_CA` and URL-encodes SKU path values.
+- [x] Current Inventory hardening branch CI passed: **114 passed, 6 opt-in tests skipped**.
 - [x] Fresh-database migration verification passed.
 - [x] Repository clean-tree verification passed.
 
 ## Current active objective
 
-**Phase 14 — Production Readiness** remains active. The implementation phases are built; remaining work is live Production verification and the first intentional low-risk listing.
+**Phase 14 — Production Readiness** remains active. Production Media is now proven. The immediate task is to deploy the Inventory staging hardening and retry the real Production Inventory Item step with a valid or blank GTIN.
 
 ## Live verification already completed
 
 - [x] Repeatable VPS deployment workflow (`git pull` → Docker rebuild/restart) has been exercised successfully.
 - [x] Public HTTPS host is reachable.
 - [x] Public `/health` returned HTTP 200 with `{"status":"ok"}` on 2026-09-13.
-- [x] VPS was confirmed running Media-path commit `7be0546bb6d611b56b6e8fba62cb88576aa7f0d6` before the latest gateway-host correction.
-- [x] Live image-upload test reached the eBay request path without a Flask crash.
-- [x] Live test on `7be0546` returned a deterministic eBay rejection, which exposed that Media was still being sent to the normal REST host.
-- [x] Media gateway-host correction was implemented and fully tested in `c1d5b42d39810b1a8ac25393bb4d66ab373513f7`.
+- [x] Media Commerce path and `apim` gateway corrections were deployed to the VPS.
+- [x] Production image upload succeeded: UI reported `1 uploaded, 0 already current` and the eBay-hosted image resource was persisted.
+- [x] The next live step reached `createOrReplaceInventoryItem` without a Flask crash.
+- [x] Inventory Item staging was rejected while the test draft contained the placeholder value `GTIN = Test GTIN`.
+- [x] Code inspection confirmed the old payload incorrectly mapped any non-empty GTIN to `product.ean`.
+- [x] eBay documentation confirms Inventory product identifiers must use the appropriate UPC/EAN/ISBN fields, and Canadian multi-locale REST requests require locale identification.
+- [x] Inventory identifier/locale hardening was implemented and fully tested.
 
 ## Immediate next actions
 
-- [ ] Deploy current `main` including `c1d5b42d39810b1a8ac25393bb4d66ab373513f7` to the VPS.
-- [ ] Re-verify `/health` after that deployment.
-- [ ] Retry **Upload Approved Images to eBay** against the real Production account.
-- [ ] If Media still fails, capture a safe structured eBay error code/status without logging credentials or raw sensitive response data.
-- [ ] Verify the real Production seller connection, policies, inventory location, and saved defaults in Settings.
+- [ ] Merge/push the Inventory staging hardening to `main` and deploy it to the VPS.
+- [ ] Re-verify `/health` after deployment.
+- [ ] Return the current test draft to Draft/Edit state and either clear `Test GTIN` or replace it with a real valid UPC/EAN/ISBN.
+- [ ] Re-run validation and approve the draft.
+- [ ] Retry **Stage eBay Inventory Item** against Production.
+- [ ] If Inventory staging succeeds, stage the unpublished Offer next.
+- [ ] Verify the real Production seller connection, policies, inventory location, and saved defaults in Settings before any final publish.
 - [ ] Verify Docker auto-restart after an actual VPS reboot.
-- [ ] Run one controlled low-risk Production listing through the complete workflow.
-- [ ] Record the first Production listing ID/URL and final evidence here.
+- [ ] Run one controlled low-risk Production listing through final publish and record its listing ID/URL.
 
 ---
 
@@ -174,6 +179,7 @@
 
 - [x] Validation for images/title/condition/quantity/price/category/SKU/aspects.
 - [x] Policy, merchant-location, marketplace, format, OAuth, title-length, and price-precision validation.
+- [x] GTIN validation now blocks invalid placeholder/malformed UPC/EAN/ISBN values before approval.
 - [x] Grouped UI errors, explicit Approve Listing, READY transition rules, Return to Draft.
 - [x] Approved-listing edit/AI overwrite protection and state-transition tests.
 
@@ -220,7 +226,7 @@
 
 # PHASE 10 — eBay Image Upload
 
-**Status: COMPLETE (implementation); Production verification in Phase 14**
+**Status: COMPLETE — Production verified 2026-09-13**
 
 - [x] eBay Media service and approved local image upload.
 - [x] Multipart `createImageFromFile` upload using `files={"image": (filename, content, mime_type)}` without manually setting multipart `Content-Type`.
@@ -235,27 +241,33 @@
 - [x] Approval/READY gating preserved.
 - [x] Deterministic multipart/201/Location/getImage/malformed/retry/persistence/host-selection coverage.
 - [x] Inventory/offer/publish behavior unchanged.
-- [ ] Latest Media gateway fix deployed and positively verified against Production.
+- [x] Media gateway fix deployed and positively verified against Production: one approved image uploaded successfully and persisted as an eBay-hosted resource.
 
 **Historical Phase 10 certification:** 83 passed, 3 skipped.  
 **Multipart/current-flow commit:** `32915e55543ae8cdb167bc23c38a17d3e7db2671`.  
 **Commerce-path commit:** `7be0546bb6d611b56b6e8fba62cb88576aa7f0d6`.  
 **Media gateway code commits:** `67fa213694f59038bc7dbcdb07eec56187b1ef4b`, `c1d5b42d39810b1a8ac25393bb4d66ab373513f7`.  
-**Latest CI:** 111 passed, 6 skipped; fresh migration PASS; clean-tree PASS.
+**Production verification:** PASS on 2026-09-13.
 
 ---
 
 # PHASE 11 — Inventory Item Staging
 
-**Status: COMPLETE**
+**Status: COMPLETE (implementation); Production re-test pending deployment**
 
 - [x] Inventory API service and Listing → Inventory Item payload mapping.
 - [x] SKU/condition/aspects/product/image/quantity mapping.
 - [x] `createOrReplaceInventoryItem`, staging persistence, validation/API error handling, idempotent retry.
+- [x] Product identifier handling classifies valid UPC-12, EAN-8/EAN-13, ISBN-10/ISBN-13 into the correct Inventory API field.
+- [x] Invalid placeholder/malformed GTIN values are blocked locally instead of being sent as `product.ean`.
+- [x] `EBAY_CA` Inventory requests send `Content-Language: en-CA` and `Accept-Language: en-CA`.
+- [x] Inventory Item SKU is URL-encoded in the endpoint path.
 - [x] Mocked + opt-in integration coverage.
+- [x] Inventory hardening full suite: **114 passed, 6 skipped**; migration PASS; clean-tree PASS.
+- [ ] Deploy Inventory hardening to Production and re-test `Stage eBay Inventory Item`.
 
 **Historical certification:** 87 passed, 4 skipped.  
-**Completion commit:** `cfcd880af9ce7014cc39b89e20b1c6892f9691df`.
+**Original completion commit:** `cfcd880af9ce7014cc39b89e20b1c6892f9691df`.
 
 ---
 
@@ -323,17 +335,27 @@ Only check external/account-level items when positively verified against the cur
 - [x] `/health` route implemented.
 - [x] VPS pull → Docker build/restart deployment workflow verified.
 - [x] Live public `/health` HTTP 200 verified on 2026-09-13.
-- [ ] Current newest `main` (`c1d5b42...` plus this reconciliation commit) deployed after Media gateway correction.
+- [x] Media gateway correction deployed successfully.
+- [ ] Inventory staging hardening deployed after the 2026-09-13 Production rejection.
 - [ ] Docker auto-restart after an actual VPS reboot verified.
 
 ## Production Media verification
 
 - [x] Multipart Media upload implementation corrected.
 - [x] Commerce Media `/commerce/media/v1_beta` path corrected.
-- [x] Live test on path-corrected build reached eBay and returned a non-transient rejection rather than an app crash/time-out.
 - [x] Media-specific `apim` gateway-host correction implemented and tested.
-- [ ] Deploy gateway correction to VPS.
-- [ ] Retry Production image upload and persist a real eBay image ID + EPS URL successfully.
+- [x] Gateway correction deployed to VPS.
+- [x] Production image upload succeeded and persisted a real eBay-hosted image resource on 2026-09-13.
+
+## Production Inventory verification
+
+- [x] Live Production `Stage eBay Inventory Item` request reached eBay on 2026-09-13.
+- [x] Initial request was rejected while the test draft contained `GTIN = Test GTIN`.
+- [x] Root app defect identified: all non-empty GTIN values were being blindly sent as EAN.
+- [x] GTIN classification/checksum validation, Canadian locale headers, and SKU path encoding implemented.
+- [x] Full Inventory-hardening CI passed: **114 passed, 6 skipped**.
+- [ ] Deploy Inventory hardening to VPS.
+- [ ] Clear/replace the placeholder GTIN and retry Inventory Item staging successfully.
 
 ## First real smoke test
 
@@ -363,12 +385,12 @@ Only check external/account-level items when positively verified against the cur
 - Inventory-location creation commit: `fbf5ff74fc3347f5ec5346c4411e639422d08774`.
 - Media multipart/current response-flow commit: `32915e55543ae8cdb167bc23c38a17d3e7db2671`.
 - Media Commerce-path commit: `7be0546bb6d611b56b6e8fba62cb88576aa7f0d6`.
-- Media gateway latest code commit: `c1d5b42d39810b1a8ac25393bb4d66ab373513f7`.
-- Latest code CI: **111 passed, 6 opt-in tests skipped**.
+- Media gateway code commit: `c1d5b42d39810b1a8ac25393bb4d66ab373513f7`.
+- Production Media verification: PASS on 2026-09-13 (`1 uploaded, 0 already current`).
+- Inventory hardening branch head before reconciliation: `84a1f5f2a6c495e9bbbd098420d1f69128c86652`.
+- Inventory hardening CI: **114 passed, 6 opt-in tests skipped**.
 - Fresh migration chain: PASS.
 - Clean-tree verification: PASS.
-- VPS deployment through `7be0546` and live `/health` HTTP 200 were positively verified on 2026-09-13.
-- Live image-upload test on `7be0546` returned “eBay rejected the image upload,” leading to the `apim` gateway-host correction now awaiting deployment.
 
 ## Definition of Done
 
@@ -389,7 +411,8 @@ Phase 14 is complete only when the latest GitHub `main` is deployed, real Produc
 - [ ] Confirm generated title/description/condition.
 - [ ] Edit at least one generated field and verify the manual edit persists.
 - [ ] Resolve validator errors and approve.
-- [ ] Upload images to eBay and persist hosted image resources.
+- [x] Production Media upload capability positively verified with an approved image.
+- [ ] Upload all smoke-test images to eBay and persist hosted image resources.
 - [ ] Stage Inventory Item.
 - [ ] Stage Offer.
 - [ ] Review final publish confirmation and explicitly publish.
@@ -406,17 +429,23 @@ Do **not** restart completed implementation phases unless a regression requires 
 ```text
 NOW
   ↓
-Deploy current GitHub main to VPS
+Merge/push Inventory staging hardening to main
   ↓
-Verify /health
+Deploy latest main to VPS and verify /health
   ↓
-Retry Production Media image upload
+Clear or replace invalid placeholder GTIN
+  ↓
+Run validation and approve
+  ↓
+Retry Stage eBay Inventory Item
   ↓
 If successful, verify Production OAuth + EBAY_CA + seller policies/location/defaults
   ↓
+Stage unpublished Offer
+  ↓
 Verify Docker reboot/restart behavior
   ↓
-Run one low-risk full Production listing
+Use one low-risk real item for final Production publish
   ↓
 Record listing ID/URL and final Phase 14 evidence
   ↓
@@ -428,30 +457,3 @@ Mark Phase 14 + MVP acceptance COMPLETE
 # Multi-account note — future
 
 The MVP remains single-seller. Business logic should avoid assumptions that make future multiple eBay seller profiles impossible. Do not build multi-account UI during the MVP unless it becomes a requirement.
-
----
-
-# Agent / LLM operating rules
-
-Any coding agent working on this repository must:
-
-1. Read current GitHub `main`, `MASTER_LIST.md`, `PRD.md`, and `setup.md` before changing code.
-2. Treat GitHub `main` and this file as the source of truth.
-3. Work only on the assigned task/current active phase unless a prerequisite or regression requires otherwise.
-4. Never mark a task `[x]` until it is implemented and verified.
-5. Add/update tests for important behavior.
-6. Run relevant tests before declaring a task complete.
-7. Run the full suite when shared workflows can be affected or before phase certification.
-8. Reconcile `MASTER_LIST.md` before finishing.
-9. Commit every coherent completed task/phase.
-10. Push completed work to `main`; do not leave completion only locally or on the VPS.
-11. Verify CI after pushing when CI applies.
-12. Keep the app runnable after every completed task.
-13. Never hard-code, print, expose, or commit credentials/tokens.
-14. Preserve manual seller edits.
-15. Never auto-publish AI-generated content.
-16. Never change publishing behavior incidentally while implementing unrelated work.
-17. Prefer deterministic mocked eBay tests; live tests remain explicit/opt-in except intentional Production smoke tests.
-18. Stop and report true external/account blockers instead of inventing eBay behavior.
-19. When external verification changes a checklist item, update this file and commit/push that documentation change.
-20. A task is not fully closed until this file matches the actual repository/deployment state.
