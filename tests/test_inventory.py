@@ -13,8 +13,9 @@ from app.services.ebay.inventory import (
 
 
 class Response:
-    def __init__(self, ok=True, status_code=204, payload=None):
+    def __init__(self, ok=True, status_code=204, payload=None, headers=None):
         self.ok, self.status_code, self.payload = ok, status_code, payload
+        self.headers = headers or {}
 
     def json(self):
         if self.payload is None:
@@ -29,6 +30,15 @@ class Http:
     def put(self, *args, **kwargs):
         self.calls.append((args, kwargs))
         return self.response
+
+
+class SequenceHttp:
+    def __init__(self, responses):
+        self.responses, self.calls = list(responses), []
+
+    def put(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        return self.responses.pop(0)
 
 
 def staged_listing(sku="STAGE-1"):
@@ -93,6 +103,70 @@ def test_inventory_stage_uses_shared_token_canadian_locale_and_is_idempotent(app
         assert kwargs["json"]["product"]["title"] == "Acme AX-1 Widget"
         assert listing.ebay_inventory_status == "STAGED" and listing.ebay_inventory_staged_at
         assert service.stage(listing) is False and len(http.calls) == 1
+
+
+def test_inventory_staging_retries_transient_500_and_can_recover(app):
+    with app.app_context():
+        listing = staged_listing("STAGE-RETRY")
+        db.session.add(listing)
+        db.session.commit()
+        transient = Response(False, 500, {
+            "errors": [{
+                "errorId": 25001,
+                "domain": "API_INVENTORY",
+                "category": "REQUEST",
+                "message": "A system error has occurred. Core Inventory Service internal error",
+            }],
+        })
+        http = SequenceHttp([transient, transient, Response(True, 204)])
+        sleeps = []
+        service = InventoryService(
+            app.config,
+            http=http,
+            token_provider=lambda: "token",
+            sleeper=sleeps.append,
+        )
+        assert service.stage(listing) is True
+        assert len(http.calls) == 3
+        assert sleeps == [1.0, 2.0]
+        assert listing.ebay_inventory_status == "STAGED"
+        assert listing.ebay_inventory_error is None
+
+
+def test_inventory_staging_exhausts_transient_retries_with_safe_diagnostic(app, caplog):
+    with app.app_context():
+        listing = staged_listing("STAGE-500")
+        db.session.add(listing)
+        db.session.commit()
+        transient = Response(False, 500, {
+            "errors": [{
+                "errorId": 25001,
+                "domain": "API_INVENTORY",
+                "category": "REQUEST",
+                "message": "A system error has occurred. Core Inventory Service internal error",
+                "parameters": [{"value": "do-not-log-this"}],
+            }],
+        }, headers={"Retry-After": "0"})
+        http = SequenceHttp([transient, transient, transient])
+        sleeps = []
+        service = InventoryService(
+            app.config,
+            http=http,
+            token_provider=lambda: "super-secret-token",
+            sleeper=sleeps.append,
+        )
+        with caplog.at_level("WARNING"):
+            with pytest.raises(InventoryServiceError, match="temporarily unavailable after 3 attempts"):
+                service.stage(listing)
+        assert len(http.calls) == 3
+        assert sleeps == [0.0, 0.0]
+        assert listing.ebay_inventory_status == "FAILED"
+        assert "HTTP 500" in listing.ebay_inventory_error
+        assert "25001" in listing.ebay_inventory_error
+        combined_logs = "\n".join(record.getMessage() for record in caplog.records)
+        assert "25001" in combined_logs
+        assert "super-secret-token" not in combined_logs
+        assert "do-not-log-this" not in combined_logs
 
 
 def test_inventory_staging_rejects_unapproved_or_unuploaded_images_and_records_safe_errors(app):
