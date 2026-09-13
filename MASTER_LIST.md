@@ -42,15 +42,17 @@
 - [x] Media API uses the current Commerce path `/commerce/media/v1_beta/...` and Media gateway host (`apim.ebay.com` / `apim.sandbox.ebay.com`).
 - [x] Production Media upload is positively verified: one approved image was accepted by eBay and persisted as an eBay-hosted image resource on 2026-09-13.
 - [x] Inventory Item staging, unpublished Offer staging, and controlled publishing are implemented.
-- [x] Inventory staging now validates/classifies UPC/EAN/ISBN identifiers instead of blindly sending every GTIN as EAN.
-- [x] Inventory staging now sends Canadian locale headers for `EBAY_CA` and URL-encodes SKU path values.
-- [x] Latest edit-save hardening CI passed: **115 passed, 6 opt-in tests skipped**.
+- [x] Inventory staging validates/classifies UPC/EAN/ISBN identifiers instead of blindly sending every GTIN as EAN.
+- [x] Inventory staging sends Canadian locale headers for `EBAY_CA` and URL-encodes SKU path values.
+- [x] Inventory staging records only safe eBay rejection diagnostics: HTTP status plus whitelisted error ID/domain/category/message; tokens, headers, raw bodies, arbitrary fields, and parameter values are excluded.
+- [x] Inventory staging now retries transient transport failures and HTTP `429/500/502/503/504` responses up to three attempts with bounded delay and `Retry-After` support.
+- [x] Latest Inventory retry hardening CI passed: **118 passed, 6 opt-in tests skipped**.
 - [x] Fresh-database migration verification passed.
 - [x] Repository clean-tree verification passed.
 
 ## Current active objective
 
-**Phase 14 — Production Readiness** remains active. Production Media is now proven. Inventory staging hardening and the edit-save crash fix are merged to `main`; the immediate task is to deploy current `main`, clear the fake placeholder fields on the test draft, and retry the real Production Inventory Item step.
+**Phase 14 — Production Readiness** remains active. Production Media is proven. A live Production `createOrReplaceInventoryItem` call now reaches eBay with cleaned placeholder metadata but eBay returns **HTTP 500 / error 25001 / `Core Inventory Service internal error`**. Safe diagnostics and bounded retry handling are implemented on `main`; the immediate task is to deploy that retry hardening and re-run Inventory staging.
 
 ## Live verification already completed
 
@@ -60,20 +62,21 @@
 - [x] Media Commerce path and `apim` gateway corrections were deployed to the VPS.
 - [x] Production image upload succeeded: UI reported `1 uploaded, 0 already current` and the eBay-hosted image resource was persisted.
 - [x] The next live step reached `createOrReplaceInventoryItem` without a Flask crash.
-- [x] Inventory Item staging was rejected while the test draft contained the placeholder value `GTIN = Test GTIN`.
+- [x] Initial Inventory staging was rejected while the test draft contained the placeholder value `GTIN = Test GTIN`.
 - [x] Code inspection confirmed the old payload incorrectly mapped any non-empty GTIN to `product.ean`.
-- [x] eBay documentation confirms Inventory product identifiers must use the appropriate UPC/EAN/ISBN fields, and Canadian multi-locale REST requests require locale identification.
-- [x] Inventory identifier/locale hardening was implemented and fully tested.
+- [x] Inventory identifier/locale hardening was implemented, tested, deployed, and the test draft was successfully edited to remove fake Product/Brand/Model/MPN/GTIN values.
 - [x] A separate live edit/save attempt exposed a 500 caused by the edit form treating persisted `ListingImage` rows as new upload objects.
-- [x] The edit/save root cause was fixed and regression-tested: clearing optional fields with an existing image now preserves the saved image and does not re-upload it.
+- [x] The edit/save root cause was fixed, regression-tested, deployed, and subsequent edit/validation requests completed normally.
+- [x] Safe Inventory diagnostics were deployed and positively verified in Production.
+- [x] Cleaned Inventory staging request returned `HTTP 500`, eBay error `25001`, domain `API_INVENTORY`, category `Request`, message `A system error has occurred. Core Inventory Service internal error`.
+- [x] eBay guidance classifies HTTP 500/server faults as retryable and recommends bounded retries; current eBay API status also shows an unresolved selling/listing system-error incident.
 
 ## Immediate next actions
 
-- [ ] Deploy current `main` including Inventory staging hardening and the edit-save crash fix to the VPS.
+- [ ] Deploy current `main` with transient Inventory retry hardening to the VPS.
 - [ ] Re-verify `/health` after deployment.
-- [ ] Return the current test draft to Draft/Edit state and clear fake Product/Brand/Model/MPN/GTIN/notes/AI placeholder fields while retaining the existing uploaded image.
-- [ ] Re-run validation and approve the draft.
-- [ ] Retry **Stage eBay Inventory Item** against Production.
+- [ ] Retry **Stage eBay Inventory Item** against Production; the app should automatically make up to three attempts for the current HTTP 500 class failure.
+- [ ] If error 25001 persists after all retries, avoid changing payload fields blindly; retry later and/or open an eBay Developer Support ticket with the safe error ID/message and timestamp.
 - [ ] If Inventory staging succeeds, stage the unpublished Offer next.
 - [ ] Verify the real Production seller connection, policies, inventory location, and saved defaults in Settings before any final publish.
 - [ ] Verify Docker auto-restart after an actual VPS reboot.
@@ -257,7 +260,7 @@
 
 # PHASE 11 — Inventory Item Staging
 
-**Status: COMPLETE (implementation); Production re-test pending deployment**
+**Status: COMPLETE (implementation); Production blocked by retryable eBay HTTP 500/25001**
 
 - [x] Inventory API service and Listing → Inventory Item payload mapping.
 - [x] SKU/condition/aspects/product/image/quantity mapping.
@@ -266,13 +269,20 @@
 - [x] Invalid placeholder/malformed GTIN values are blocked locally instead of being sent as `product.ean`.
 - [x] `EBAY_CA` Inventory requests send `Content-Language: en-CA` and `Accept-Language: en-CA`.
 - [x] Inventory Item SKU is URL-encoded in the endpoint path.
+- [x] Safe eBay rejection diagnostics expose only status/error ID/domain/category/message and exclude credentials, raw response bodies, arbitrary fields, and parameters.
+- [x] Transient transport failures and HTTP `429/500/502/503/504` responses are retried up to three attempts with bounded delay and simple `Retry-After` support.
 - [x] Mocked + opt-in integration coverage.
 - [x] Inventory hardening full suite: **114 passed, 6 skipped**; migration PASS; clean-tree PASS.
 - [x] Edit-save regression suite on top of Inventory hardening: **115 passed, 6 skipped**; migration PASS; clean-tree PASS.
-- [ ] Deploy current `main` to Production and re-test `Stage eBay Inventory Item`.
+- [x] Safe diagnostics suite: **116 passed, 6 skipped**.
+- [x] Retry hardening suite: **118 passed, 6 skipped**; migration PASS; clean-tree PASS.
+- [x] Live cleaned Production request positively identified eBay-side `HTTP 500 / 25001 / Core Inventory Service internal error`.
+- [ ] Deploy retry-hardening `main` and re-test `Stage eBay Inventory Item`.
 
 **Historical certification:** 87 passed, 4 skipped.  
-**Original completion commit:** `cfcd880af9ce7014cc39b89e20b1c6892f9691df`.
+**Original completion commit:** `cfcd880af9ce7014cc39b89e20b1c6892f9691df`.  
+**Safe diagnostics commit:** `8d3c72d0b86552e3877387cc458b94e218673773`.  
+**Transient retry code/test commits:** `c0658c4ea9738f5c7a37e7d35eafe486505750d9`, `bb52409b9a596fd6b90d6236beb0f70acd90c882`.
 
 ---
 
@@ -341,8 +351,9 @@ Only check external/account-level items when positively verified against the cur
 - [x] VPS pull → Docker build/restart deployment workflow verified.
 - [x] Live public `/health` HTTP 200 verified on 2026-09-13.
 - [x] Media gateway correction deployed successfully.
-- [x] Existing-image edit/save crash identified and fixed in `main`; regression test passed.
-- [ ] Current newest `main` with Inventory staging hardening + edit-save fix deployed after the 2026-09-13 live failures.
+- [x] Existing-image edit/save crash fix deployed and live edit/save no longer crashes.
+- [x] Safe Inventory rejection diagnostics deployed and verified against Production.
+- [ ] Current newest `main` with transient Inventory retry hardening deployed after the live HTTP 500/25001 result.
 - [ ] Docker auto-restart after an actual VPS reboot verified.
 
 ## Production Media verification
@@ -358,11 +369,13 @@ Only check external/account-level items when positively verified against the cur
 - [x] Live Production `Stage eBay Inventory Item` request reached eBay on 2026-09-13.
 - [x] Initial request was rejected while the test draft contained `GTIN = Test GTIN`.
 - [x] Root app defect identified: all non-empty GTIN values were being blindly sent as EAN.
-- [x] GTIN classification/checksum validation, Canadian locale headers, and SKU path encoding implemented.
+- [x] GTIN classification/checksum validation, Canadian locale headers, and SKU path encoding implemented and deployed.
 - [x] Full Inventory-hardening CI passed: **114 passed, 6 skipped**.
-- [x] During cleanup of the same test draft, edit/save 500 was traced to persisted `ListingImage` objects entering the upload field; fix merged with **115 passed, 6 skipped**.
-- [ ] Deploy current `main` to VPS.
-- [ ] Clear fake placeholder product metadata and retry Inventory Item staging successfully.
+- [x] Edit/save 500 was traced to persisted `ListingImage` objects entering the upload field; fix deployed with live edit/save success.
+- [x] Safe error diagnostics were deployed; cleaned Production request returned `HTTP 500`, eBay error `25001`, `Core Inventory Service internal error`.
+- [x] Deterministic retry hardening added for network faults and HTTP `429/500/502/503/504`; CI passed **118 passed, 6 skipped**.
+- [ ] Deploy retry hardening and re-test Inventory staging.
+- [ ] If 25001 persists after all three attempts, treat it as an eBay-side operational blocker rather than mutating valid listing data without evidence.
 
 ## First real smoke test
 
@@ -397,6 +410,9 @@ Only check external/account-level items when positively verified against the cur
 - Inventory hardening CI: **114 passed, 6 opt-in tests skipped**.
 - Edit-save crash fix merge commit: `11d8b64b6fb51e159122e718d23dccfd1c71c807`.
 - Edit-save regression CI: **115 passed, 6 opt-in tests skipped**.
+- Safe Inventory diagnostics commit: `8d3c72d0b86552e3877387cc458b94e218673773`; Production diagnostics confirmed `HTTP 500 / 25001`.
+- Inventory retry code/test commits: `c0658c4ea9738f5c7a37e7d35eafe486505750d9`, `bb52409b9a596fd6b90d6236beb0f70acd90c882`.
+- Inventory retry CI: **118 passed, 6 opt-in tests skipped**.
 - Fresh migration chain: PASS.
 - Clean-tree verification: PASS.
 
@@ -437,15 +453,13 @@ Do **not** restart completed implementation phases unless a regression requires 
 ```text
 NOW
   ↓
-Deploy latest GitHub main to VPS
+Deploy latest GitHub main with Inventory retry hardening
   ↓
 Verify /health
   ↓
-Edit current test draft: clear fake Product/Brand/Model/MPN/GTIN/notes while retaining its existing image
+Retry Stage eBay Inventory Item (automatic bounded retries on HTTP 500)
   ↓
-Run validation and approve
-  ↓
-Retry Stage eBay Inventory Item
+If eBay 25001 persists, wait/retry later or escalate to eBay Developer Support; do not blindly mutate valid payload fields
   ↓
 If successful, verify Production OAuth + EBAY_CA + seller policies/location/defaults
   ↓
