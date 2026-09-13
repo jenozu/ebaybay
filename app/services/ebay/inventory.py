@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from urllib.parse import quote
 
 import requests
@@ -10,6 +11,9 @@ import requests
 from ...extensions import db
 from ...models import Listing, ListingStatus, utcnow
 from .oauth import OAuthError, get_oauth_service
+
+
+logger = logging.getLogger(__name__)
 
 
 class InventoryServiceError(OAuthError):
@@ -26,6 +30,8 @@ _CONDITIONS = {
 _PRODUCT_IDENTIFIER_ERROR = (
     "GTIN must be a valid UPC-12, EAN-8/EAN-13, ISBN-10/ISBN-13, or left blank."
 )
+_SAFE_ERROR_FIELDS = ("errorId", "domain", "category", "message")
+_SAFE_ERROR_TEXT_LIMIT = 300
 
 
 def inventory_condition(value: str | None) -> str | None:
@@ -67,6 +73,50 @@ def product_identifier(value: str | None) -> tuple[str, str] | None:
             return "isbn", normalized
         return "ean", normalized
     raise ValueError(_PRODUCT_IDENTIFIER_ERROR)
+
+
+def _safe_error_text(value) -> str | None:
+    if value is None or isinstance(value, (dict, list, tuple, set)):
+        return None
+    text = " ".join(str(value).split())
+    return text[:_SAFE_ERROR_TEXT_LIMIT] or None
+
+
+def safe_ebay_error_details(response) -> dict[str, str | int]:
+    """Extract only non-secret, diagnostic eBay error fields from an HTTP response."""
+    details: dict[str, str | int] = {}
+    status = getattr(response, "status_code", None)
+    if isinstance(status, int):
+        details["status"] = status
+    try:
+        payload = response.json()
+    except (AttributeError, TypeError, ValueError):
+        return details
+    if not isinstance(payload, dict):
+        return details
+    errors = payload.get("errors")
+    if not isinstance(errors, list) or not errors or not isinstance(errors[0], dict):
+        return details
+    error = errors[0]
+    for field in _SAFE_ERROR_FIELDS:
+        value = _safe_error_text(error.get(field))
+        if value is not None:
+            details[field] = value
+    return details
+
+
+def _safe_rejection_message(details: dict[str, str | int]) -> str:
+    message = "eBay rejected the inventory item."
+    diagnostic_bits = []
+    if details.get("status") is not None:
+        diagnostic_bits.append(f"HTTP {details['status']}")
+    if details.get("errorId"):
+        diagnostic_bits.append(f"eBay error {details['errorId']}")
+    if details.get("message"):
+        diagnostic_bits.append(str(details["message"]))
+    if diagnostic_bits:
+        message = f"{message} {' · '.join(diagnostic_bits)}"
+    return message
 
 
 def inventory_payload(listing: Listing) -> dict:
@@ -148,7 +198,10 @@ class InventoryService:
             db.session.commit()
             raise InventoryServiceError(listing.ebay_inventory_error) from exc
         if not getattr(response, "ok", False):
-            listing.ebay_inventory_status, listing.ebay_inventory_error = "FAILED", "eBay rejected the inventory item. Review the listing details and try again."
+            details = safe_ebay_error_details(response)
+            logger.warning("eBay Inventory API rejected request: %s", json.dumps(details, sort_keys=True))
+            listing.ebay_inventory_status = "FAILED"
+            listing.ebay_inventory_error = _safe_rejection_message(details)
             db.session.commit()
             raise InventoryServiceError(listing.ebay_inventory_error)
         listing.ebay_inventory_status = "STAGED"
