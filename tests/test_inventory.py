@@ -13,8 +13,13 @@ from app.services.ebay.inventory import (
 
 
 class Response:
-    def __init__(self, ok=True, status_code=204):
-        self.ok, self.status_code = ok, status_code
+    def __init__(self, ok=True, status_code=204, payload=None):
+        self.ok, self.status_code, self.payload = ok, status_code, payload
+
+    def json(self):
+        if self.payload is None:
+            raise ValueError("no json")
+        return self.payload
 
 
 class Http:
@@ -109,6 +114,40 @@ def test_inventory_staging_rejects_unapproved_or_unuploaded_images_and_records_s
         with pytest.raises(InventoryServiceError, match="rejected"):
             InventoryService(app.config, http=Http(Response(False, 400)), token_provider=lambda: "token").stage(listing)
         assert listing.ebay_inventory_status == "FAILED" and "token" not in (listing.ebay_inventory_error or "")
+
+
+def test_inventory_rejection_logs_and_persists_only_safe_ebay_fields(app, caplog):
+    with app.app_context():
+        listing = staged_listing("STAGE-DIAGNOSTIC")
+        db.session.add(listing)
+        db.session.commit()
+        response = Response(False, 400, {
+            "errors": [{
+                "errorId": 25002,
+                "domain": "API_INVENTORY",
+                "category": "REQUEST",
+                "message": "A required field is missing.",
+                "parameters": [{"name": "secret", "value": "do-not-log-this"}],
+            }],
+            "access_token": "also-do-not-log-this",
+        })
+        service = InventoryService(app.config, http=Http(response), token_provider=lambda: "super-secret-token")
+        with caplog.at_level("WARNING"):
+            with pytest.raises(InventoryServiceError, match="25002"):
+                service.stage(listing)
+        assert listing.ebay_inventory_status == "FAILED"
+        assert "HTTP 400" in listing.ebay_inventory_error
+        assert "25002" in listing.ebay_inventory_error
+        assert "A required field is missing." in listing.ebay_inventory_error
+        combined_logs = "\n".join(record.getMessage() for record in caplog.records)
+        assert '"status": 400' in combined_logs
+        assert '"errorId": "25002"' in combined_logs
+        assert '"domain": "API_INVENTORY"' in combined_logs
+        assert '"category": "REQUEST"' in combined_logs
+        assert "super-secret-token" not in combined_logs
+        assert "do-not-log-this" not in combined_logs
+        assert "also-do-not-log-this" not in combined_logs
+        assert "do-not-log-this" not in listing.ebay_inventory_error
 
 
 def test_inventory_staging_route_is_protected_and_never_changes_to_live(client, login, app, monkeypatch):
