@@ -84,7 +84,7 @@ def test_media_upload_uses_multipart_201_location_get_image_and_persists_resourc
 
         method, args, kwargs = http.calls[0]
         assert method == "POST"
-        assert args[0] == "https://api.sandbox.ebay.com/commerce/media/v1_beta/image/create_image_from_file"
+        assert args[0] == "https://apim.sandbox.ebay.com/commerce/media/v1_beta/image/create_image_from_file"
         assert kwargs["headers"]["Authorization"] == "Bearer shared-token"
         assert kwargs["headers"]["Accept"] == "application/json"
         assert "Content-Type" not in kwargs["headers"]
@@ -93,7 +93,7 @@ def test_media_upload_uses_multipart_201_location_get_image_and_persists_resourc
 
         method, args, kwargs = http.calls[1]
         assert method == "GET"
-        assert args[0] == "https://api.sandbox.ebay.com/commerce/media/v1_beta/image/fake-image-id"
+        assert args[0] == "https://apim.sandbox.ebay.com/commerce/media/v1_beta/image/fake-image-id"
         assert kwargs["headers"]["Authorization"] == "Bearer shared-token"
         assert item.ebay_image_id == "fake-image-id"
         assert item.ebay_image_url == "https://i.ebayimg.com/fake-image-id.jpg"
@@ -105,13 +105,31 @@ def test_media_upload_uses_multipart_201_location_get_image_and_persists_resourc
         assert stored.ebay_image_url == "https://i.ebayimg.com/fake-image-id.jpg"
 
 
-def test_media_service_uses_current_commerce_media_paths_in_production(app):
+def test_media_service_uses_current_commerce_media_gateway_in_production(app):
     config = dict(app.config)
     config["EBAY_ENVIRONMENT"] = "production"
     config.pop("EBAY_API_BASE", None)
     service = MediaService(config, token_provider=lambda: "token")
-    assert service.endpoint == "https://api.ebay.com/commerce/media/v1_beta/image/create_image_from_file"
-    assert service.image_endpoint("image id") == "https://api.ebay.com/commerce/media/v1_beta/image/image%20id"
+    assert service.endpoint == "https://apim.ebay.com/commerce/media/v1_beta/image/create_image_from_file"
+    assert service.image_endpoint("image id") == "https://apim.ebay.com/commerce/media/v1_beta/image/image%20id"
+
+
+@pytest.mark.parametrize(
+    ("environment", "configured", "expected"),
+    [
+        ("production", "https://api.ebay.com", "https://apim.ebay.com"),
+        ("sandbox", "https://api.sandbox.ebay.com/", "https://apim.sandbox.ebay.com"),
+        ("production", "https://mock.example.test/api", "https://mock.example.test/api"),
+    ],
+)
+def test_media_service_maps_canonical_api_base_to_media_gateway_but_preserves_custom_base(
+    app, environment, configured, expected
+):
+    config = dict(app.config)
+    config["EBAY_ENVIRONMENT"] = environment
+    config["EBAY_API_BASE"] = configured
+    service = MediaService(config, token_provider=lambda: "token")
+    assert service.base_url == expected
 
 
 @pytest.mark.parametrize(
