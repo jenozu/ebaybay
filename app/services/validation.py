@@ -4,8 +4,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from ..models import Listing
-from .ebay.oauth import get_oauth_service
 from .ebay.account import defaults_validation_issues
+from .ebay.inventory import product_identifier
+from .ebay.oauth import get_oauth_service
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,7 @@ class ValidationIssue:
 
 def validate_listing(listing: Listing, *, config: dict, upload_dir: Path, sku_exists) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
+
     def required(value, field, message):
         if value in (None, ""):
             issues.append(ValidationIssue(field, message))
@@ -29,11 +31,17 @@ def validate_listing(listing: Listing, *, config: dict, upload_dir: Path, sku_ex
     if listing.title and len(listing.title) > config["EBAY_TITLE_MAX_LENGTH"]:
         issues.append(ValidationIssue("title", f"Title must be {config['EBAY_TITLE_MAX_LENGTH']} characters or fewer."))
     required(listing.condition, "condition", "Select an item condition.")
+    if listing.gtin:
+        try:
+            product_identifier(listing.gtin)
+        except ValueError as exc:
+            issues.append(ValidationIssue("gtin", str(exc)))
     if not isinstance(listing.quantity, int) or listing.quantity <= 0:
         issues.append(ValidationIssue("quantity", "Quantity must be greater than zero."))
     try:
         price = Decimal(str(listing.final_price))
-        if price <= 0: raise InvalidOperation
+        if price <= 0:
+            raise InvalidOperation
         if price.as_tuple().exponent < -2:
             issues.append(ValidationIssue("final_price", "Final price cannot use more than two decimal places."))
     except (InvalidOperation, TypeError):
