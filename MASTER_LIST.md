@@ -32,6 +32,7 @@
 - [x] Phases 1–13 are implemented in the main application.
 - [x] Private login, CSRF, secure sessions, database persistence, migrations, and `/health` are implemented.
 - [x] Draft creation, image upload, seller notes, edit/archive/delete workflow are implemented.
+- [x] Existing-image edit/save handling is hardened: persisted `ListingImage` rows no longer populate the upload-only form field or crash saves with `AttributeError: 'ListingImage' object has no attribute 'stream'`.
 - [x] AI analysis, taxonomy/item specifics, active comps/pricing, and listing writer are implemented.
 - [x] Internal validation and explicit human approval are implemented.
 - [x] Shared eBay OAuth connection service is implemented.
@@ -43,13 +44,13 @@
 - [x] Inventory Item staging, unpublished Offer staging, and controlled publishing are implemented.
 - [x] Inventory staging now validates/classifies UPC/EAN/ISBN identifiers instead of blindly sending every GTIN as EAN.
 - [x] Inventory staging now sends Canadian locale headers for `EBAY_CA` and URL-encodes SKU path values.
-- [x] Current Inventory hardening branch CI passed: **114 passed, 6 opt-in tests skipped**.
+- [x] Latest edit-save hardening CI passed: **115 passed, 6 opt-in tests skipped**.
 - [x] Fresh-database migration verification passed.
 - [x] Repository clean-tree verification passed.
 
 ## Current active objective
 
-**Phase 14 — Production Readiness** remains active. Production Media is now proven. The immediate task is to deploy the Inventory staging hardening and retry the real Production Inventory Item step with a valid or blank GTIN.
+**Phase 14 — Production Readiness** remains active. Production Media is now proven. Inventory staging hardening and the edit-save crash fix are merged to `main`; the immediate task is to deploy current `main`, clear the fake placeholder fields on the test draft, and retry the real Production Inventory Item step.
 
 ## Live verification already completed
 
@@ -63,12 +64,14 @@
 - [x] Code inspection confirmed the old payload incorrectly mapped any non-empty GTIN to `product.ean`.
 - [x] eBay documentation confirms Inventory product identifiers must use the appropriate UPC/EAN/ISBN fields, and Canadian multi-locale REST requests require locale identification.
 - [x] Inventory identifier/locale hardening was implemented and fully tested.
+- [x] A separate live edit/save attempt exposed a 500 caused by the edit form treating persisted `ListingImage` rows as new upload objects.
+- [x] The edit/save root cause was fixed and regression-tested: clearing optional fields with an existing image now preserves the saved image and does not re-upload it.
 
 ## Immediate next actions
 
-- [ ] Merge/push the Inventory staging hardening to `main` and deploy it to the VPS.
+- [ ] Deploy current `main` including Inventory staging hardening and the edit-save crash fix to the VPS.
 - [ ] Re-verify `/health` after deployment.
-- [ ] Return the current test draft to Draft/Edit state and either clear `Test GTIN` or replace it with a real valid UPC/EAN/ISBN.
+- [ ] Return the current test draft to Draft/Edit state and clear fake Product/Brand/Model/MPN/GTIN/notes/AI placeholder fields while retaining the existing uploaded image.
 - [ ] Re-run validation and approve the draft.
 - [ ] Retry **Stage eBay Inventory Item** against Production.
 - [ ] If Inventory staging succeeds, stage the unpublished Offer next.
@@ -103,7 +106,8 @@
 - [x] Private single-user authentication, password hashing, secure session configuration, CSRF, no public registration.
 - [x] Dashboard/New Listing, multiple image uploads, seller notes, unique SKU.
 - [x] Save/reopen/edit/archive/delete workflows and listing state display.
-- [x] Automated draft/auth/upload tests.
+- [x] Existing saved images remain separate from the upload-only edit field; editing without a new upload preserves current images and no longer crashes.
+- [x] Automated draft/auth/upload/edit regression tests.
 
 **Definition of Done:** local draft workflow works without AI or eBay APIs.
 
@@ -264,7 +268,8 @@
 - [x] Inventory Item SKU is URL-encoded in the endpoint path.
 - [x] Mocked + opt-in integration coverage.
 - [x] Inventory hardening full suite: **114 passed, 6 skipped**; migration PASS; clean-tree PASS.
-- [ ] Deploy Inventory hardening to Production and re-test `Stage eBay Inventory Item`.
+- [x] Edit-save regression suite on top of Inventory hardening: **115 passed, 6 skipped**; migration PASS; clean-tree PASS.
+- [ ] Deploy current `main` to Production and re-test `Stage eBay Inventory Item`.
 
 **Historical certification:** 87 passed, 4 skipped.  
 **Original completion commit:** `cfcd880af9ce7014cc39b89e20b1c6892f9691df`.
@@ -336,7 +341,8 @@ Only check external/account-level items when positively verified against the cur
 - [x] VPS pull → Docker build/restart deployment workflow verified.
 - [x] Live public `/health` HTTP 200 verified on 2026-09-13.
 - [x] Media gateway correction deployed successfully.
-- [ ] Inventory staging hardening deployed after the 2026-09-13 Production rejection.
+- [x] Existing-image edit/save crash identified and fixed in `main`; regression test passed.
+- [ ] Current newest `main` with Inventory staging hardening + edit-save fix deployed after the 2026-09-13 live failures.
 - [ ] Docker auto-restart after an actual VPS reboot verified.
 
 ## Production Media verification
@@ -354,8 +360,9 @@ Only check external/account-level items when positively verified against the cur
 - [x] Root app defect identified: all non-empty GTIN values were being blindly sent as EAN.
 - [x] GTIN classification/checksum validation, Canadian locale headers, and SKU path encoding implemented.
 - [x] Full Inventory-hardening CI passed: **114 passed, 6 skipped**.
-- [ ] Deploy Inventory hardening to VPS.
-- [ ] Clear/replace the placeholder GTIN and retry Inventory Item staging successfully.
+- [x] During cleanup of the same test draft, edit/save 500 was traced to persisted `ListingImage` objects entering the upload field; fix merged with **115 passed, 6 skipped**.
+- [ ] Deploy current `main` to VPS.
+- [ ] Clear fake placeholder product metadata and retry Inventory Item staging successfully.
 
 ## First real smoke test
 
@@ -387,8 +394,9 @@ Only check external/account-level items when positively verified against the cur
 - Media Commerce-path commit: `7be0546bb6d611b56b6e8fba62cb88576aa7f0d6`.
 - Media gateway code commit: `c1d5b42d39810b1a8ac25393bb4d66ab373513f7`.
 - Production Media verification: PASS on 2026-09-13 (`1 uploaded, 0 already current`).
-- Inventory hardening branch head before reconciliation: `84a1f5f2a6c495e9bbbd098420d1f69128c86652`.
 - Inventory hardening CI: **114 passed, 6 opt-in tests skipped**.
+- Edit-save crash fix merge commit: `11d8b64b6fb51e159122e718d23dccfd1c71c807`.
+- Edit-save regression CI: **115 passed, 6 opt-in tests skipped**.
 - Fresh migration chain: PASS.
 - Clean-tree verification: PASS.
 
@@ -429,11 +437,11 @@ Do **not** restart completed implementation phases unless a regression requires 
 ```text
 NOW
   ↓
-Merge/push Inventory staging hardening to main
+Deploy latest GitHub main to VPS
   ↓
-Deploy latest main to VPS and verify /health
+Verify /health
   ↓
-Clear or replace invalid placeholder GTIN
+Edit current test draft: clear fake Product/Brand/Model/MPN/GTIN/notes while retaining its existing image
   ↓
 Run validation and approve
   ↓
