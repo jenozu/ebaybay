@@ -40,6 +40,16 @@ def test_validation_returns_specific_errors_for_missing_requirements(app, tmp_pa
         assert {"images", "title", "condition", "quantity", "final_price", "category"} <= messages.keys()
 
 
+def test_invalid_gtin_is_blocked_before_approval(app, tmp_path):
+    with app.app_context():
+        ready_config(app, tmp_path)
+        listing = valid_listing(app)
+        listing.gtin = "Test GTIN"
+        messages = {issue.field: issue.message for issue in validate(app, listing)}
+        assert "gtin" in messages
+        assert "valid UPC-12" in messages["gtin"]
+
+
 def test_required_aspect_policy_and_oauth_are_blockers(app, tmp_path):
     with app.app_context():
         listing = valid_listing(app); listing.aspects[0].value = None
