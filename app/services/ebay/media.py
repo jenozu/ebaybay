@@ -33,10 +33,11 @@ class MediaService:
 
     @property
     def endpoint(self) -> str:
-        return f"{self.base_url}/sell/media/v1/image/create_image_from_file"
+        # eBay Media API is a Commerce API and remains on the v1_beta path.
+        return f"{self.base_url}/commerce/media/v1_beta/image/create_image_from_file"
 
     def image_endpoint(self, image_id: str) -> str:
-        return f"{self.base_url}/sell/media/v1/image/{quote(image_id, safe='')}"
+        return f"{self.base_url}/commerce/media/v1_beta/image/{quote(image_id, safe='')}"
 
     def _headers(self) -> dict[str, str]:
         return {
