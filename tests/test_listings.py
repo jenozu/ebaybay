@@ -73,6 +73,74 @@ def test_edit_reopen_and_archive_restore(client, login, app):
         assert db.session.get(Listing, listing_id).status == ListingStatus.DRAFT
 
 
+def test_edit_existing_listing_without_new_upload_preserves_image_and_allows_blank_optional_fields(client, login, app):
+    login()
+    client.post(
+        "/listings/new",
+        data={
+            "title": "Test Item",
+            "product_name": "Placeholder Product",
+            "brand": "Placeholder Brand",
+            "model_number": "Placeholder Model",
+            "mpn": "Placeholder MPN",
+            "gtin": "123456789012",
+            "condition": "New",
+            "quantity": "1",
+            "final_price": "50.00",
+            "seller_notes": "Placeholder notes",
+            "visible_text_text": "Placeholder text",
+            "search_terms_text": "Placeholder search",
+            "attributes_text": "Color: Placeholder",
+            "images": (io.BytesIO(JPEG), "existing.jpg"),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    with app.app_context():
+        listing = db.session.query(Listing).one()
+        listing_id = listing.id
+        original_filename = listing.images[0].filename
+        listing.status = ListingStatus.READY
+        db.session.commit()
+
+    response = client.post(
+        f"/listings/{listing_id}/edit",
+        data={
+            "title": "Test Item",
+            "product_name": "",
+            "brand": "",
+            "model_number": "",
+            "mpn": "",
+            "gtin": "",
+            "condition": "New",
+            "quantity": "1",
+            "final_price": "50.00",
+            "seller_notes": "",
+            "visible_text_text": "",
+            "search_terms_text": "",
+            "attributes_text": "",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Draft updated." in response.data
+    with app.app_context():
+        listing = db.session.get(Listing, listing_id)
+        assert listing.status == ListingStatus.DRAFT
+        assert listing.product_name is None
+        assert listing.brand is None
+        assert listing.model_number is None
+        assert listing.mpn is None
+        assert listing.gtin is None
+        assert listing.seller_notes is None
+        assert listing.ai_visible_text == []
+        assert listing.ai_search_terms == []
+        assert listing.ai_detected_attributes == {}
+        assert len(listing.images) == 1
+        assert listing.images[0].filename == original_filename
+
+
 def test_delete_draft_removes_database_record_and_files(client, login, app):
     login()
     client.post("/listings/new", data={"quantity": "1", "images": (io.BytesIO(JPEG), "delete.jpg")}, content_type="multipart/form-data", follow_redirects=True)
