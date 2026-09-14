@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eBayBay Command Zone</title>
+  <style>
+    :root {
+      --pink: #FFD8E8;
+      --black: #000000;
+      --white: #FFFFFF;
+      --cyan: #9BE9FB;
+      --cyan-hover: #83DFEF;
+      --lilac: #FAE8FF;
+      --ice: #EBF8FF;
+      --rose: #F6BED5;
+      --green: #BDF5C8;
+      --yellow: #FFF2A8;
+      --red: #FFB4B4;
+      --muted: #747474;
+      --line: #151515;
+      --shadow: 4px 4px 0 #000;
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--pink);
+      color: var(--black);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px clamp(18px, 4vw, 46px);
+      background: var(--black);
+      color: var(--white);
+      border-bottom: 3px solid var(--black);
+    }
+
+    .brand-wrap,
+    .top-actions,
+    .inline,
+    .row-between {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand {
+      font-size: 1.45rem;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .environment {
+      border: 2px solid var(--white);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: .68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--cyan);
+    }
+
+    .shell {
+      width: min(1440px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 70px;
+    }
+
+    .command-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow,
+    .status-pill,
+    .stage-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      width: fit-content;
+      border: 2px solid var(--black);
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: var(--ice);
+      font-size: .7rem;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin: 9px 0 6px;
+      font-size: clamp(2rem, 4vw, 4rem);
+      letter-spacing: -0.055em;
+      line-height: .98;
+    }
+
+    h2 {
+      margin-bottom: 6px;
+      font-size: 1.3rem;
+      letter-spacing: -0.025em;
+    }
+
+    .subtle { color: #555; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      border: 3px solid var(--black);
+      border-radius: 13px;
+      box-shadow: 3px 3px 0 var(--black);
+      padding: 9px 14px;
+      background: var(--white);
+      color: var(--black);
+      text-decoration: none;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+
+    .btn:hover {
+      transform: translate(1px, 1px);
+      box-shadow: 2px 2px 0 var(--black);
+    }
+
+    .btn-cyan { background: var(--cyan); }
+    .btn-cyan:hover { background: var(--cyan-hover); }
+    .btn-dark { background: var(--black); color: var(--white); border-color: var(--white); box-shadow: 3px 3px 0 var(--white); }
+    .btn-small { min-height: 36px; padding: 6px 10px; border-width: 2px; box-shadow: 2px 2px 0 var(--black); font-size: .82rem; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .metric,
+    .panel {
+      border: 3px solid var(--black);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      background: var(--white);
+    }
+
+    .metric {
+      min-height: 134px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .metric::after {
+      content: "";
+      position: absolute;
+      right: -22px;
+      bottom: -30px;
+      width: 90px;
+      height: 90px;
+      border: 3px solid var(--black);
+      border-radius: 50%;
+      opacity: .08;
+    }
+
+    .metric:nth-child(2) { background: var(--cyan); }
+    .metric:nth-child(3) { background: var(--lilac); }
+    .metric:nth-child(4) { background: var(--yellow); }
+
+    .metric-label {
+      font-size: .78rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .metric-value {
+      margin: 8px 0 0;
+      font-size: 2.35rem;
+      font-weight: 950;
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .metric-note { font-size: .78rem; color: #555; font-weight: 700; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(310px, .8fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 20px; }
+
+    .panel { padding: 20px; }
+    .panel-dark { background: var(--black); color: var(--white); }
+
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 17px;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(116px, 1fr));
+      gap: 10px;
+      overflow-x: auto;
+      padding: 3px 3px 8px;
+    }
+
+    .stage {
+      min-height: 124px;
+      border: 2px solid var(--black);
+      border-radius: 14px;
+      padding: 13px;
+      background: #fff;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+    }
+
+    .stage:nth-child(2) { background: var(--lilac); }
+    .stage:nth-child(3) { background: var(--ice); }
+    .stage:nth-child(4) { background: var(--yellow); }
+    .stage:nth-child(5) { background: var(--green); }
+
+    .stage-title { font-size: .8rem; font-weight: 900; }
+    .stage-number { font-size: 1.85rem; font-weight: 950; letter-spacing: -.05em; }
+    .stage-caption { color: #555; font-size: .73rem; font-weight: 700; }
+
+    .queue { display: grid; gap: 10px; }
+
+    .queue-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      border: 2px solid var(--black);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--white);
+    }
+
+    .queue-dot {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--black);
+      border-radius: 50%;
+      background: var(--yellow);
+    }
+
+    .queue-item.urgent .queue-dot { background: var(--red); }
+    .queue-item.good .queue-dot { background: var(--green); }
+    .queue-title { font-size: .9rem; font-weight: 900; }
+    .queue-meta { margin-top: 3px; font-size: .74rem; color: #666; }
+
+    .listing-table { display: grid; gap: 9px; }
+
+    .listing-row {
+      display: grid;
+      grid-template-columns: 54px minmax(180px, 1.5fr) .72fr .58fr .55fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border: 2px solid var(--black);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .thumb {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--black);
+      border-radius: 10px;
+      background: var(--rose);
+      font-size: 1.25rem;
+      font-weight: 950;
+    }
+
+    .listing-title { font-size: .88rem; font-weight: 900; }
+    .listing-sku { margin-top: 3px; color: #666; font-size: .7rem; }
+    .cell-label { display: none; font-size: .63rem; color: #777; text-transform: uppercase; font-weight: 900; }
+    .cell-value { font-size: .78rem; font-weight: 800; }
+
+    .stage-pill { background: var(--lilac); padding: 4px 7px; font-size: .62rem; }
+    .stage-pill.ready { background: var(--cyan); }
+    .stage-pill.live { background: var(--green); }
+    .stage-pill.issue { background: var(--red); }
+
+    .health-grid { display: grid; gap: 10px; }
+
+    .health-row {
+      display: grid;
+      grid-template-columns: 12px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,.18);
+    }
+
+    .health-row:last-child { border-bottom: 0; }
+    .health-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px #fff; }
+    .health-name { font-size: .82rem; font-weight: 850; }
+    .health-value { color: #ccc; font-size: .72rem; text-align: right; }
+
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .quick {
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 2px solid var(--black);
+      border-radius: 14px;
+      padding: 13px;
+      background: var(--lilac);
+      cursor: pointer;
+    }
+
+    .quick:nth-child(2) { background: var(--cyan); }
+    .quick:nth-child(3) { background: var(--yellow); }
+    .quick:nth-child(4) { background: var(--ice); }
+    .quick-icon { font-size: 1.25rem; font-weight: 950; }
+    .quick-title { font-size: .8rem; font-weight: 950; }
+    .quick-copy { margin-top: 3px; color: #555; font-size: .68rem; }
+
+    .command-strip {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border: 3px solid var(--black);
+      border-radius: 16px;
+      background: var(--black);
+      color: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .command-strip strong { color: var(--cyan); }
+    .tiny { font-size: .72rem; color: #bdbdbd; }
+
+    @media (max-width: 1080px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 18px, 1440px); padding-top: 18px; }
+      .command-head { grid-template-columns: 1fr; align-items: start; }
+      .command-head .btn { width: 100%; }
+      .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .metric { min-height: 112px; }
+      .listing-row { grid-template-columns: 48px minmax(0, 1fr) auto; }
+      .listing-row > .responsive-cell { display: none; }
+      .listing-row .btn { grid-column: 2 / -1; width: 100%; }
+      .top-actions .top-label { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .stats { grid-template-columns: 1fr; }
+      .quick-grid { grid-template-columns: 1fr; }
+      .panel { padding: 15px; }
+      .environment { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <!--
+    Static eBayBay dashboard concept only.
+    This file is deliberately isolated from the Flask application so it can be
+    reviewed and refined without changing production routes or publishing logic.
+  -->
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand">eBayBay</div>
+      <span class="environment">Production · EBAY_CA</span>
+    </div>
+    <div class="top-actions">
+      <span class="top-label" style="font-weight:800;font-size:.82rem;opacity:.78">Seller Command Center</span>
+      <button class="btn btn-dark btn-small" type="button">Settings</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="command-head">
+      <div>
+        <span class="eyebrow">COMMAND ZONE</span>
+        <h1>Everything you need to sell,<br>in one place.</h1>
+        <p class="subtle">Review what needs attention, move listings through the pipeline, and keep eBay connection health visible.</p>
+      </div>
+      <button class="btn btn-cyan" type="button">＋ New Listing</button>
+    </section>
+
+    <section class="stats" aria-label="Dashboard metrics">
+      <article class="metric">
+        <div class="metric-label">Drafts</div>
+        <div class="metric-value">4</div>
+        <div class="metric-note">2 waiting for details</div>
+      </article>
+      <article class="metric">
+        <div class="metric-label">Ready to Publish</div>
+        <div class="metric-value">2</div>
+        <div class="metric-note">All validation passed</div>
+      </article>
+      <article class="metric">
+        <div class="metric-label">Live Listings</div>
+        <div class="metric-value">18</div>
+        <div class="metric-note">$824.00 listed value</div>
+      </article>
+      <article class="metric">
+        <div class="metric-label">Needs Attention</div>
+        <div class="metric-value">1</div>
+        <div class="metric-note">Seller default needs refresh</div>
+      </article>
+    </section>
+
+    <section class="main-grid">
+      <div class="stack">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">PIPELINE</span>
+              <h2 style="margin-top:10px">Listing flow</h2>
+              <p class="subtle" style="margin-bottom:0">See where every item is in the eBayBay workflow.</p>
+            </div>
+            <button class="btn btn-small" type="button">View all</button>
+          </div>
+          <div class="pipeline">
+            <div class="stage">
+              <div><div class="stage-title">Intake</div><div class="stage-number">4</div></div>
+              <div class="stage-caption">Photos + basic details</div>
+            </div>
+            <div class="stage">
+              <div><div class="stage-title">Build</div><div class="stage-number">3</div></div>
+              <div class="stage-caption">AI, taxonomy + price</div>
+            </div>
+            <div class="stage">
+              <div><div class="stage-title">Ready</div><div class="stage-number">2</div></div>
+              <div class="stage-caption">Validated + approved</div>
+            </div>
+            <div class="stage">
+              <div><div class="stage-title">Staged</div><div class="stage-number">1</div></div>
+              <div class="stage-caption">Inventory + offer ready</div>
+            </div>
+            <div class="stage">
+              <div><div class="stage-title">Published</div><div class="stage-number">18</div></div>
+              <div class="stage-caption">Live on eBay Canada</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">ACTION QUEUE</span>
+              <h2 style="margin-top:10px">What needs you</h2>
+            </div>
+            <span class="status-pill" style="background:var(--yellow)">3 actions</span>
+          </div>
+          <div class="queue">
+            <div class="queue-item urgent">
+              <span class="queue-dot"></span>
+              <div>
+                <div class="queue-title">Vintage Sony Walkman needs a required item specific</div>
+                <div class="queue-meta">Blocking validation · Size is missing</div>
+              </div>
+              <button class="btn btn-small" type="button">Fix</button>
+            </div>
+            <div class="queue-item">
+              <span class="queue-dot"></span>
+              <div>
+                <div class="queue-title">Nike Air Max 90 is ready for your final review</div>
+                <div class="queue-meta">Title, price, images and category ready</div>
+              </div>
+              <button class="btn btn-small btn-cyan" type="button">Review</button>
+            </div>
+            <div class="queue-item good">
+              <span class="queue-dot"></span>
+              <div>
+                <div class="queue-title">Seller policies were refreshed successfully</div>
+                <div class="queue-meta">Payment, fulfillment, returns and inventory location current</div>
+              </div>
+              <button class="btn btn-small" type="button">View</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">LISTINGS</span>
+              <h2 style="margin-top:10px">Recent work</h2>
+            </div>
+            <button class="btn btn-small" type="button">All listings</button>
+          </div>
+          <div class="listing-table">
+            <div class="listing-row">
+              <div class="thumb">N</div>
+              <div><div class="listing-title">Nike Air Max 90 Men's Shoes</div><div class="listing-sku">EBAY-20260913-NK90</div></div>
+              <div class="responsive-cell"><span class="cell-label">Stage</span><span class="stage-pill ready">Ready</span></div>
+              <div class="responsive-cell"><span class="cell-label">Price</span><div class="cell-value">$89.00</div></div>
+              <div class="responsive-cell"><span class="cell-label">Updated</span><div class="cell-value">8m ago</div></div>
+              <button class="btn btn-small" type="button">Open</button>
+            </div>
+            <div class="listing-row">
+              <div class="thumb" style="background:var(--cyan)">S</div>
+              <div><div class="listing-title">Sony Walkman Portable Cassette Player</div><div class="listing-sku">EBAY-20260913-SNY1</div></div>
+              <div class="responsive-cell"><span class="cell-label">Stage</span><span class="stage-pill issue">Fix</span></div>
+              <div class="responsive-cell"><span class="cell-label">Price</span><div class="cell-value">$64.00</div></div>
+              <div class="responsive-cell"><span class="cell-label">Updated</span><div class="cell-value">22m ago</div></div>
+              <button class="btn btn-small" type="button">Open</button>
+            </div>
+            <div class="listing-row">
+              <div class="thumb" style="background:var(--green)">A</div>
+              <div><div class="listing-title">Adidas Adilette Comfort Slides</div><div class="listing-sku">EBAY-20260913-ADS2</div></div>
+              <div class="responsive-cell"><span class="cell-label">Stage</span><span class="stage-pill live">Live</span></div>
+              <div class="responsive-cell"><span class="cell-label">Price</span><div class="cell-value">$34.00</div></div>
+              <div class="responsive-cell"><span class="cell-label">Updated</span><div class="cell-value">1h ago</div></div>
+              <button class="btn btn-small" type="button">Open</button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <aside class="stack">
+        <article class="panel panel-dark">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow" style="background:var(--cyan);color:#000">SYSTEM STATUS</span>
+              <h2 style="margin-top:10px">eBay connection</h2>
+            </div>
+            <span style="font-size:.72rem;font-weight:900;color:var(--green)">ALL GOOD</span>
+          </div>
+          <div class="health-grid">
+            <div class="health-row"><span class="health-dot"></span><span class="health-name">Seller OAuth</span><span class="health-value">Connected</span></div>
+            <div class="health-row"><span class="health-dot"></span><span class="health-name">Marketplace</span><span class="health-value">EBAY_CA</span></div>
+            <div class="health-row"><span class="health-dot"></span><span class="health-name">Media API</span><span class="health-value">Operational</span></div>
+            <div class="health-row"><span class="health-dot"></span><span class="health-name">Inventory API</span><span class="health-value">Operational</span></div>
+            <div class="health-row"><span class="health-dot"></span><span class="health-name">Seller defaults</span><span class="health-value">Current</span></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">QUICK ACTIONS</span>
+              <h2 style="margin-top:10px">Jump in</h2>
+            </div>
+          </div>
+          <div class="quick-grid">
+            <div class="quick" role="button" tabindex="0"><div class="quick-icon">＋</div><div><div class="quick-title">New Listing</div><div class="quick-copy">Start with photos</div></div></div>
+            <div class="quick" role="button" tabindex="0"><div class="quick-icon">↻</div><div><div class="quick-title">Refresh eBay</div><div class="quick-copy">Policies + locations</div></div></div>
+            <div class="quick" role="button" tabindex="0"><div class="quick-icon">✓</div><div><div class="quick-title">Ready Queue</div><div class="quick-copy">Review publish-ready items</div></div></div>
+            <div class="quick" role="button" tabindex="0"><div class="quick-icon">↗</div><div><div class="quick-title">Live Listings</div><div class="quick-copy">See published items</div></div></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <span class="eyebrow">TODAY</span>
+          <h2 style="margin-top:10px">Seller pulse</h2>
+          <div style="display:grid;gap:13px;margin-top:18px">
+            <div class="row-between"><span class="subtle">Published today</span><strong>3</strong></div>
+            <div class="row-between"><span class="subtle">Items processed</span><strong>7</strong></div>
+            <div class="row-between"><span class="subtle">Draft value</span><strong>$241</strong></div>
+            <div class="row-between"><span class="subtle">Live listed value</span><strong>$824</strong></div>
+          </div>
+        </article>
+      </aside>
+    </section>
+
+    <section class="command-strip">
+      <div>
+        <strong>Command Zone prototype</strong>
+        <div class="tiny">Static design concept — no Production routes, APIs, listing state, or publishing behavior are connected from this file.</div>
+      </div>
+      <span class="environment" style="color:var(--green)">Prototype</span>
+    </section>
+  </main>
+
+  <script>
+    // Tiny interaction layer for the standalone prototype only.
+    document.querySelectorAll('button, .quick').forEach((control) => {
+      control.addEventListener('click', () => {
+        const label = (control.textContent || '').trim().replace(/\s+/g, ' ');
+        console.log('[eBayBay command-zone prototype]', label);
+      });
+    });
+  </script>
+</body>
+</html>
