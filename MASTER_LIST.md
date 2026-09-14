@@ -446,6 +446,28 @@ Phase 14 is complete only when the latest GitHub `main` is deployed, real Produc
 
 ---
 
+# PHASE 15 — Lean Seller Dashboard
+
+## Goal
+
+Turn `/dashboard` into the primary, practical command center for finding and continuing listing work without adding analytics or duplicating the existing listing detail workflow.
+
+**Status: PLANNED**
+
+- [x] Audit existing dashboard, routes, models, templates, seller settings, and command-zone prototype.
+- [x] Record the minimal page ownership and workflow in `docs/DASHBOARD_PLAN.md`.
+- [ ] Render real Drafts, Needs Attention, Ready, and Published counts.
+- [ ] Add server-rendered All/Drafts/Needs Attention/Ready/Published filtering.
+- [ ] Add responsive listing queue cards with thumbnail, title fallback, SKU, state, price, updated time, and Open/Continue action.
+- [ ] Show View on eBay only for published listings with a saved URL.
+- [ ] Show compact cached/local eBay connection, marketplace, and seller-default health.
+- [ ] Add deterministic dashboard coverage and run the full regression suite.
+- [ ] Verify fresh migrations, update this source of truth, push the tested commit, and verify CI.
+
+**Architecture decision:** Keep top-level navigation to Dashboard, New Listing, and Settings. Keep listing detail/edit as workflow destinations. Do not add separate listing/status pages; dashboard filters own those views.
+
+---
+
 # EXECUTION ORDER FROM CURRENT STATE
 
 Do **not** restart completed implementation phases unless a regression requires it.
