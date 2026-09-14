@@ -3,6 +3,7 @@ from pathlib import Path
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, send_from_directory, url_for
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from .ai.providers import AIConfigurationError, AIProviderError
 from .ai.service import AnalysisValidationError, analyze_listing
@@ -23,6 +24,7 @@ from .services.writer import generate_condition_description, generate_descriptio
 from .services.validation import validate_listing
 from .services.sku import generate_sku
 from .services.uploads import UploadValidationError, save_image
+from .services.dashboard import FILTERS, build_dashboard_state, connection_health
 
 bp = Blueprint("listings", __name__)
 
@@ -127,8 +129,23 @@ def _prepare_edit_form(form: ListingForm, listing: Listing) -> None:
 @bp.get("/dashboard")
 @login_required
 def dashboard():
-    listings = db.session.scalars(select(Listing).order_by(Listing.updated_at.desc())).all()
-    return render_template("dashboard.html", listings=listings)
+    listings = db.session.scalars(
+        select(Listing)
+        .options(selectinload(Listing.images), selectinload(Listing.aspects))
+        .order_by(Listing.updated_at.desc())
+    ).all()
+    selected_filter = request.args.get("view", "all").lower()
+    if selected_filter not in FILTERS:
+        selected_filter = "all"
+    rows, counts = build_dashboard_state(listings, selected_filter)
+    connection = get_oauth_service().connection()
+    return render_template(
+        "dashboard.html",
+        rows=rows,
+        counts=counts,
+        selected_filter=selected_filter,
+        connection_health=connection_health(connection, current_app.config),
+    )
 
 
 @bp.route("/listings/new", methods=["GET", "POST"])

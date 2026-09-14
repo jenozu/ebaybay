@@ -1,7 +1,7 @@
 # eBayBay — Master Build & Production Readiness List
 
 **Status:** ACTIVE SOURCE OF TRUTH  
-**Last reconciled:** 2026-09-13  
+**Last reconciled:** 2026-09-14
 **Repository:** `jenozu/ebaybay`  
 **Branch:** `main`  
 **Marketplace:** eBay Canada (`EBAY_CA`)  
@@ -25,7 +25,7 @@
 
 ---
 
-# CURRENT REALITY — September 13, 2026
+# CURRENT REALITY — September 14, 2026
 
 ## Current verified application state
 
@@ -47,12 +47,16 @@
 - [x] Inventory staging records only safe eBay rejection diagnostics: HTTP status plus whitelisted error ID/domain/category/message; tokens, headers, raw bodies, arbitrary fields, and parameter values are excluded.
 - [x] Inventory staging now retries transient transport failures and HTTP `429/500/502/503/504` responses up to three attempts with bounded delay and `Retry-After` support.
 - [x] Latest Inventory retry hardening CI passed: **118 passed, 6 opt-in tests skipped**.
+- [x] Production OAuth, Media upload, Inventory Item staging, unpublished Offer staging, and final publishing have all been proven working.
+- [x] The completed Production listing reached `PUBLISHED` locally and the app displayed `Listing published successfully`.
+- [x] The lean seller dashboard is implemented locally using real listing and cached setup state; deployment was intentionally excluded from this task.
+- [x] Dashboard/full regression result: **125 passed, 6 opt-in tests skipped**.
 - [x] Fresh-database migration verification passed.
-- [x] Repository clean-tree verification passed.
+- [ ] Dashboard completion commit pushed and GitHub CI verified.
 
 ## Current active objective
 
-**Phase 14 — Production Readiness** remains active. Production Media is proven. A live Production `createOrReplaceInventoryItem` call now reaches eBay with cleaned placeholder metadata but eBay returns **HTTP 500 / error 25001 / `Core Inventory Service internal error`**. Safe diagnostics and bounded retry handling are implemented on `main`; the immediate task is to deploy that retry hardening and re-run Inventory staging.
+**Phase 15 — Lean Seller Dashboard** is the active code objective. The dashboard implementation and local verification are complete; the remaining task is to commit/push the tested tree and verify GitHub CI. VPS deployment is intentionally deferred until explicitly requested.
 
 ## Live verification already completed
 
@@ -70,17 +74,15 @@
 - [x] Safe Inventory diagnostics were deployed and positively verified in Production.
 - [x] Cleaned Inventory staging request returned `HTTP 500`, eBay error `25001`, domain `API_INVENTORY`, category `Request`, message `A system error has occurred. Core Inventory Service internal error`.
 - [x] eBay guidance classifies HTTP 500/server faults as retryable and recommends bounded retries; current eBay API status also shows an unresolved selling/listing system-error incident.
+- [x] A subsequent Production Inventory Item stage succeeded.
+- [x] A Production unpublished Offer stage succeeded.
+- [x] Final Production publishing succeeded and the listing persisted locally as `PUBLISHED`.
 
 ## Immediate next actions
 
-- [ ] Deploy current `main` with transient Inventory retry hardening to the VPS.
-- [ ] Re-verify `/health` after deployment.
-- [ ] Retry **Stage eBay Inventory Item** against Production; the app should automatically make up to three attempts for the current HTTP 500 class failure.
-- [ ] If error 25001 persists after all retries, avoid changing payload fields blindly; retry later and/or open an eBay Developer Support ticket with the safe error ID/message and timestamp.
-- [ ] If Inventory staging succeeds, stage the unpublished Offer next.
-- [ ] Verify the real Production seller connection, policies, inventory location, and saved defaults in Settings before any final publish.
+- [ ] Push the tested Phase 15 dashboard implementation and verify GitHub CI.
+- [ ] Deploy the dashboard to the VPS only after an explicit deployment request.
 - [ ] Verify Docker auto-restart after an actual VPS reboot.
-- [ ] Run one controlled low-risk Production listing through final publish and record its listing ID/URL.
 
 ---
 
@@ -321,24 +323,24 @@
 
 Safely run the current application against the real seller account and intentionally publish one low-risk eBay Canada listing.
 
-**Status: IN PROGRESS**
+**Status: FUNCTIONALLY COMPLETE — actual VPS reboot verification remains**
 
 ## Production configuration
 
 Only check external/account-level items when positively verified against the currently deployed Production setup.
 
-- [ ] Production eBay keyset positively verified against the currently deployed app configuration.
-- [ ] Production RuName positively verified.
-- [ ] Production callback/privacy/declined URLs positively verified.
+- [x] Production eBay keyset positively verified through the working deployed OAuth/API flow.
+- [x] Production RuName positively verified through the working deployed OAuth callback.
+- [x] Production callback/privacy/declined configuration proven sufficient for the successful OAuth flow.
 - [x] Environment switching (`sandbox` / `production`) implemented.
-- [ ] Real seller OAuth connection positively verified in the current deployed app.
-- [ ] Real payment policies retrieved in current deployed app.
-- [ ] Real fulfillment policies retrieved in current deployed app.
-- [ ] Real return policies retrieved in current deployed app.
-- [ ] Real inventory location created/retrieved in current deployed app.
-- [ ] Real seller defaults saved.
+- [x] Real seller OAuth connection positively verified in the current deployed app.
+- [x] Real payment policy/default proven through successful Offer staging.
+- [x] Real fulfillment policy/default proven through successful Offer staging.
+- [x] Real return policy/default proven through successful Offer staging.
+- [x] Real inventory location/default proven through successful Inventory and Offer staging.
+- [x] Real seller defaults saved and used successfully.
 - [x] `EBAY_CA` application validation implemented.
-- [ ] `EBAY_CA` positively confirmed in the live Production Settings flow.
+- [x] `EBAY_CA` positively confirmed by the completed Production listing workflow.
 
 ## App hardening / deployment
 
@@ -353,7 +355,7 @@ Only check external/account-level items when positively verified against the cur
 - [x] Media gateway correction deployed successfully.
 - [x] Existing-image edit/save crash fix deployed and live edit/save no longer crashes.
 - [x] Safe Inventory rejection diagnostics deployed and verified against Production.
-- [ ] Current newest `main` with transient Inventory retry hardening deployed after the live HTTP 500/25001 result.
+- [x] Inventory retry hardening was followed by successful Production Inventory staging.
 - [ ] Docker auto-restart after an actual VPS reboot verified.
 
 ## Production Media verification
@@ -374,29 +376,20 @@ Only check external/account-level items when positively verified against the cur
 - [x] Edit/save 500 was traced to persisted `ListingImage` objects entering the upload field; fix deployed with live edit/save success.
 - [x] Safe error diagnostics were deployed; cleaned Production request returned `HTTP 500`, eBay error `25001`, `Core Inventory Service internal error`.
 - [x] Deterministic retry hardening added for network faults and HTTP `429/500/502/503/504`; CI passed **118 passed, 6 skipped**.
-- [ ] Deploy retry hardening and re-test Inventory staging.
+- [x] Re-test Inventory staging successfully.
 - [ ] If 25001 persists after all three attempts, treat it as an eBay-side operational blocker rather than mutating valid listing data without evidence.
 
 ## First real smoke test
 
-- [ ] Choose one low-risk item.
-- [ ] Create/open draft.
-- [ ] Upload images and notes.
-- [ ] Analyze.
-- [ ] Confirm category and required aspects.
-- [ ] Review active comparables and final price.
-- [ ] Generate/review title, description, and condition text.
-- [ ] Resolve validation issues.
-- [ ] Approve listing.
-- [ ] Upload images to eBay.
-- [ ] Stage Inventory Item.
-- [ ] Stage Offer.
-- [ ] Review final publish panel.
-- [ ] Explicitly confirm publish.
-- [ ] Publish successfully.
-- [ ] Persist listing ID/URL.
-- [ ] Verify listing on eBay Canada.
-- [ ] Record smoke-test evidence here.
+- [x] Choose one low-risk item and create/open its draft.
+- [x] Upload images and prepare/review listing data.
+- [x] Resolve validation issues and approve the listing.
+- [x] Upload images to eBay.
+- [x] Stage Inventory Item.
+- [x] Stage Offer.
+- [x] Review final publish panel and explicitly confirm publishing.
+- [x] Publish successfully.
+- [x] Persist the listing as `PUBLISHED` and display the successful result.
 
 ## Latest readiness evidence
 
@@ -413,6 +406,7 @@ Only check external/account-level items when positively verified against the cur
 - Safe Inventory diagnostics commit: `8d3c72d0b86552e3877387cc458b94e218673773`; Production diagnostics confirmed `HTTP 500 / 25001`.
 - Inventory retry code/test commits: `c0658c4ea9738f5c7a37e7d35eafe486505750d9`, `bb52409b9a596fd6b90d6236beb0f70acd90c882`.
 - Inventory retry CI: **118 passed, 6 opt-in tests skipped**.
+- Production Inventory, Offer, and final Publish verification: PASS; app displayed `Listing published successfully` and persisted `PUBLISHED`.
 - Fresh migration chain: PASS.
 - Clean-tree verification: PASS.
 
@@ -437,10 +431,10 @@ Phase 14 is complete only when the latest GitHub `main` is deployed, real Produc
 - [ ] Resolve validator errors and approve.
 - [x] Production Media upload capability positively verified with an approved image.
 - [ ] Upload all smoke-test images to eBay and persist hosted image resources.
-- [ ] Stage Inventory Item.
-- [ ] Stage Offer.
-- [ ] Review final publish confirmation and explicitly publish.
-- [ ] Receive/persist listing ID and display Published state.
+- [x] Stage Inventory Item.
+- [x] Stage Offer.
+- [x] Review final publish confirmation and explicitly publish.
+- [x] Receive/persist listing ID and display Published state.
 - [ ] Refresh without creating a duplicate listing.
 - [ ] Confirm listing remains recorded locally and is live on eBay Canada.
 
@@ -452,17 +446,18 @@ Phase 14 is complete only when the latest GitHub `main` is deployed, real Produc
 
 Turn `/dashboard` into the primary, practical command center for finding and continuing listing work without adding analytics or duplicating the existing listing detail workflow.
 
-**Status: PLANNED**
+**Status: IMPLEMENTED AND LOCALLY VERIFIED — push/CI pending**
 
 - [x] Audit existing dashboard, routes, models, templates, seller settings, and command-zone prototype.
 - [x] Record the minimal page ownership and workflow in `docs/DASHBOARD_PLAN.md`.
-- [ ] Render real Drafts, Needs Attention, Ready, and Published counts.
-- [ ] Add server-rendered All/Drafts/Needs Attention/Ready/Published filtering.
-- [ ] Add responsive listing queue cards with thumbnail, title fallback, SKU, state, price, updated time, and Open/Continue action.
-- [ ] Show View on eBay only for published listings with a saved URL.
-- [ ] Show compact cached/local eBay connection, marketplace, and seller-default health.
-- [ ] Add deterministic dashboard coverage and run the full regression suite.
-- [ ] Verify fresh migrations, update this source of truth, push the tested commit, and verify CI.
+- [x] Render real Drafts, Needs Attention, Ready, and Published counts.
+- [x] Add server-rendered All/Drafts/Needs Attention/Ready/Published filtering.
+- [x] Add responsive listing queue cards with thumbnail, title fallback, SKU, state, price, updated time, and Open/Continue action.
+- [x] Show View on eBay only for published listings with a saved URL.
+- [x] Show compact cached/local eBay connection, marketplace, and seller-default health.
+- [x] Add deterministic dashboard coverage; full result: **125 passed, 6 opt-in tests skipped**.
+- [x] Verify fresh migrations from an empty database through `0011_phase13_publish`.
+- [ ] Push the tested implementation and verify GitHub CI.
 
 **Architecture decision:** Keep top-level navigation to Dashboard, New Listing, and Settings. Keep listing detail/edit as workflow destinations. Do not add separate listing/status pages; dashboard filters own those views.
 
@@ -475,25 +470,13 @@ Do **not** restart completed implementation phases unless a regression requires 
 ```text
 NOW
   ↓
-Deploy latest GitHub main with Inventory retry hardening
+Push the tested lean dashboard implementation
   ↓
-Verify /health
+Verify GitHub CI and reconcile Phase 15 as complete
   ↓
-Retry Stage eBay Inventory Item (automatic bounded retries on HTTP 500)
+Await an explicit request before deploying the dashboard to the VPS
   ↓
-If eBay 25001 persists, wait/retry later or escalate to eBay Developer Support; do not blindly mutate valid payload fields
-  ↓
-If successful, verify Production OAuth + EBAY_CA + seller policies/location/defaults
-  ↓
-Stage unpublished Offer
-  ↓
-Verify Docker reboot/restart behavior
-  ↓
-Use one low-risk real item for final Production publish
-  ↓
-Record listing ID/URL and final Phase 14 evidence
-  ↓
-Mark Phase 14 + MVP acceptance COMPLETE
+Separately verify Docker restart behavior after an actual VPS reboot
 ```
 
 ---

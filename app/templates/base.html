@@ -10,11 +10,15 @@
   <header class="topbar">
     <a class="brand" href="{{ url_for('listings.dashboard') if session.get('authenticated') else url_for('auth.login') }}">eBayBay</a>
     {% if session.get('authenticated') %}
-    <a class="btn btn-small btn-white" href="{{ url_for('oauth.settings') }}">Settings</a>
-    <form method="post" action="{{ url_for('auth.logout') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn-small btn-white" type="submit">Sign Out</button>
-    </form>
+    <nav class="topnav" aria-label="Primary navigation">
+      <a href="{{ url_for('listings.dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('listings.new_listing') }}">New Listing</a>
+      <a href="{{ url_for('oauth.settings') }}">Settings</a>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="topnav-signout" type="submit">Sign Out</button>
+      </form>
+    </nav>
     {% endif %}
   </header>
   <main class="shell">

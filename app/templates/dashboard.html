@@ -1,22 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Drafts · eBayBay{% endblock %}
+{% block title %}Dashboard · eBayBay{% endblock %}
 {% block content %}
-<div class="page-head">
-  <div><span class="eyebrow">CORE DRAFT APP</span><h1>Listings</h1></div>
-  <a class="btn btn-cyan" href="{{ url_for('listings.new_listing') }}">+ New Listing</a>
+<div class="dashboard-head">
+  <div><span class="eyebrow">SELLER COMMAND CENTER</span><h1>Listings</h1><p class="muted">Create, continue, and check your eBay listings in one place.</p></div>
+  <div class="dashboard-actions"><a class="btn btn-cyan" href="{{ url_for('listings.new_listing') }}">+ New Listing</a></div>
 </div>
-{% if listings %}
-<div class="grid">
-{% for listing in listings %}
-  <article class="card listing-card">
-    <div class="card-row"><strong>{{ listing.title or 'Untitled draft' }}</strong><span class="badge badge-{{ listing.status|lower }}">{{ listing.status }}</span></div>
-    <div class="muted">{{ listing.sku }}</div>
-    <p>{{ (listing.seller_notes or 'No seller notes yet.')[:140] }}</p>
-    <a class="btn btn-white" href="{{ url_for('listings.detail', listing_id=listing.id) }}">Open Draft</a>
+
+<section class="status-summary" aria-label="Listing status summary">
+  <a class="summary-card summary-drafts{% if selected_filter == 'drafts' %} is-active{% endif %}" href="{{ url_for('listings.dashboard', view='drafts') }}"><span>Drafts</span><strong data-testid="draft-count">{{ counts.drafts }}</strong></a>
+  <a class="summary-card summary-attention{% if selected_filter == 'attention' %} is-active{% endif %}" href="{{ url_for('listings.dashboard', view='attention') }}"><span>Needs Attention</span><strong data-testid="attention-count">{{ counts.attention }}</strong></a>
+  <a class="summary-card summary-ready{% if selected_filter == 'ready' %} is-active{% endif %}" href="{{ url_for('listings.dashboard', view='ready') }}"><span>Ready</span><strong data-testid="ready-count">{{ counts.ready }}</strong></a>
+  <a class="summary-card summary-published{% if selected_filter == 'published' %} is-active{% endif %}" href="{{ url_for('listings.dashboard', view='published') }}"><span>Published</span><strong data-testid="published-count">{{ counts.published }}</strong></a>
+</section>
+
+<section class="connection-strip" aria-label="eBay setup status">
+  <div><strong>eBay:</strong> <span class="health-dot {{ 'health-good' if connection_health.connected else 'health-warn' }}"></span>{{ 'Connected' if connection_health.connected else 'Needs connection' }}</div>
+  <div><strong>Marketplace:</strong> {{ connection_health.marketplace }}</div>
+  <div><strong>Seller defaults:</strong> {{ 'Ready' if connection_health.defaults_ready else 'Needs setup' }}</div>
+  <div><strong>Environment:</strong> {{ connection_health.environment }}</div>
+  <a href="{{ url_for('oauth.settings') }}">Manage settings</a>
+</section>
+
+<div class="queue-head">
+  <div><h2>Listing work queue</h2><p class="muted">Most recently updated first.</p></div>
+  <nav class="filter-tabs" aria-label="Filter listings">
+    {% for key, label in [('all', 'All'), ('drafts', 'Drafts'), ('attention', 'Needs Attention'), ('ready', 'Ready'), ('published', 'Published')] %}
+      <a class="filter-tab{% if selected_filter == key %} is-active{% endif %}" href="{{ url_for('listings.dashboard', view=key) }}"{% if selected_filter == key %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if rows %}
+<div class="listing-queue">
+  {% for row in rows %}{% set listing = row.listing %}
+  <article class="queue-card">
+    <a class="queue-thumbnail" href="{{ url_for('listings.detail', listing_id=listing.id) }}" aria-label="Open {{ listing.title or listing.product_name or listing.sku }}">{% if listing.images %}<img src="{{ url_for('listings.uploaded_file', filename=listing.images[0].filename) }}" alt="">{% else %}<span aria-hidden="true">No photo</span>{% endif %}</a>
+    <div class="queue-main">
+      <div class="queue-title-row"><div><h3><a href="{{ url_for('listings.detail', listing_id=listing.id) }}">{{ listing.title or listing.product_name or 'Untitled draft' }}</a></h3><span class="muted">{{ listing.sku }}</span></div><span class="badge badge-{{ listing.status|lower|replace('_', '-') }}">{{ listing.status|replace('_', ' ') }}</span></div>
+      {% if row.attention_reasons %}<div class="attention-note"><strong>Needs attention:</strong> {{ row.attention_reasons|join(' · ') }}</div>{% endif %}
+      <div class="queue-meta"><span><strong>Price</strong> {{ ('$' ~ listing.price_display ~ ' CAD') if listing.price_display else 'Not set' }}</span><span><strong>Updated</strong> {{ listing.updated_at.strftime('%b %d, %Y · %H:%M UTC') }}</span></div>
+    </div>
+    <div class="queue-actions">
+      <a class="btn btn-white" href="{{ url_for('listings.detail', listing_id=listing.id) }}">{{ 'Open' if listing.status == 'PUBLISHED' else 'Continue' }}</a>
+      {% if listing.status == 'PUBLISHED' and listing.ebay_listing_url %}<a class="text-link" href="{{ listing.ebay_listing_url }}" target="_blank" rel="noopener noreferrer">View on eBay</a>{% endif %}
+    </div>
   </article>
-{% endfor %}
+  {% endfor %}
 </div>
 {% else %}
-<section class="card empty"><h2>No drafts yet</h2><p>Create your first listing draft and add product photos.</p></section>
+<section class="card empty dashboard-empty">
+  {% if selected_filter == 'all' %}<h2>No listings yet</h2><p>Create your first listing and add product photos.</p><a class="btn btn-cyan" href="{{ url_for('listings.new_listing') }}">+ New Listing</a>
+  {% else %}<h2>No listings in this view</h2><p>Try another filter or start a new listing.</p><a class="btn btn-white" href="{{ url_for('listings.dashboard') }}">View all listings</a>{% endif %}
+</section>
 {% endif %}
 {% endblock %}
