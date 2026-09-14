@@ -52,6 +52,8 @@ def test_create_offer_uses_sandbox_endpoint_persists_offer_and_sets_ebay_staged(
         args, kwargs = http.calls[0]
         assert args[0] == "https://api.sandbox.ebay.com/sell/inventory/v1/offer"
         assert kwargs["headers"]["Authorization"] == "Bearer shared-token"
+        assert kwargs["headers"]["Content-Language"] == "en-CA"
+        assert kwargs["headers"]["Accept-Language"] == "en-CA"
         assert kwargs["json"]["marketplaceId"] == "EBAY_CA" and kwargs["json"]["sku"] == "OFFER-1"
         assert listing.ebay_offer_id == "fake-offer-id" and listing.ebay_offer_status == "STAGED"
         assert listing.status == ListingStatus.EBAY_STAGED
@@ -68,6 +70,43 @@ def test_offer_staging_is_idempotent_and_blocks_conflicting_or_ambiguous_retries
         other = offer_listing("OFFER-2"); db.session.add(other); db.session.commit()
         with pytest.raises(OfferServiceError, match="outcome is unknown"):
             OfferService(app.config, http=FailingHttp(), token_provider=lambda: "token").stage(other)
+        assert other.ebay_offer_status == "UNKNOWN"
+
+
+def test_offer_rejection_logs_only_safe_fields_and_preserves_retry_safety(app, caplog):
+    with app.app_context():
+        db.session.add_all([ready_defaults(), offer_listing("OFFER-DIAGNOSTIC")]); db.session.commit()
+        listing = Listing.query.filter_by(sku="OFFER-DIAGNOSTIC").one()
+        response = Response({
+            "errors": [{
+                "errorId": 25002,
+                "domain": "API_INVENTORY",
+                "category": "REQUEST",
+                "message": "A seller policy is invalid.",
+                "parameters": [{"name": "policy", "value": "do-not-log-this"}],
+            }],
+            "access_token": "also-do-not-log-this",
+        }, ok=False, status_code=400)
+        service = OfferService(app.config, http=Http(response), token_provider=lambda: "super-secret-token")
+        with caplog.at_level("WARNING"):
+            with pytest.raises(OfferServiceError, match="25002"):
+                service.stage(listing)
+        assert listing.ebay_offer_status == "FAILED"
+        assert "HTTP 400" in listing.ebay_offer_error
+        assert "A seller policy is invalid." in listing.ebay_offer_error
+        combined_logs = "\n".join(record.getMessage() for record in caplog.records)
+        assert '"status": 400' in combined_logs
+        assert '"errorId": "25002"' in combined_logs
+        assert '"domain": "API_INVENTORY"' in combined_logs
+        assert "super-secret-token" not in combined_logs
+        assert "do-not-log-this" not in combined_logs
+        assert "also-do-not-log-this" not in combined_logs
+
+        other = offer_listing("OFFER-500")
+        db.session.add(other); db.session.commit()
+        response_500 = Response({"errors": [{"errorId": 25001, "message": "A system error has occurred."}]}, ok=False, status_code=500)
+        with pytest.raises(OfferServiceError, match="could not confirm"):
+            OfferService(app.config, http=Http(response_500), token_provider=lambda: "token").stage(other)
         assert other.ebay_offer_status == "UNKNOWN"
 
 
